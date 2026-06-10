@@ -1,0 +1,2130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<title>Blueprint Field Source Map — Sojo Industries</title>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet"/>
+<style>
+:root {
+  --bg-canvas: #050505;
+  --bg-bar: rgba(8,8,10,0.92);
+  --bg-card: #0F0F12;
+  --bg-card-hover: #15151A;
+  --border: #1E1E22;
+  --text-primary: #E8E8EE;
+  --text-secondary: #8A8A95;
+  --text-tertiary: #4A4A52;
+  --accent: #FFE066;
+  --accent-dim: rgba(255,224,102,0.15);
+
+  --c-bp: #5A9CD8;   --bg-bp: rgba(90,156,216,0.10);   --bd-bp: rgba(90,156,216,0.45);
+  --c-var: #D4A830;  --bg-var: rgba(212,168,48,0.10);  --bd-var: rgba(212,168,48,0.45);
+  --c-itm: #5ACA5A;  --bg-itm: rgba(90,202,90,0.10);   --bd-itm: rgba(90,202,90,0.45);
+  --c-bom: #4ACAC8;  --bg-bom: rgba(74,202,200,0.10);  --bd-bom: rgba(74,202,200,0.45);
+  --c-rm: #E898D0;   --bg-rm: rgba(232,152,208,0.10);  --bd-rm: rgba(232,152,208,0.45);
+  --c-wo: #E07A7A;   --bg-wo: rgba(224,122,122,0.10);  --bd-wo: rgba(224,122,122,0.45);
+  --c-co: #B8A0E8;   --bg-co: rgba(184,160,232,0.10);  --bd-co: rgba(184,160,232,0.45);
+  --c-ca: #FFA070;   --bg-ca: rgba(255,160,112,0.10);  --bd-ca: rgba(255,160,112,0.45);
+  --c-ac: #9090A0;   --bg-ac: rgba(144,144,160,0.10);  --bd-ac: rgba(144,144,160,0.45);
+  --c-sop: #A0B0F0;  --bg-sop: rgba(160,176,240,0.10); --bd-sop: rgba(160,176,240,0.45);
+  --c-tbd: #E8C840;  --bg-tbd: rgba(232,200,64,0.10);  --bd-tbd: rgba(232,200,64,0.45);
+  --c-flag: #FF9040; --c-new: #4ADA8A; --c-rem: #707078; --c-moved: #40C8E8;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background: #030303;
+  font-family: 'Manrope', sans-serif;
+  color: var(--text-primary);
+  min-height: 100vh;
+}
+
+/* ═══ TOP BAR ═══ */
+.topbar {
+  position: sticky; top: 0; z-index: 100;
+  background: var(--bg-bar);
+  backdrop-filter: blur(16px);
+  border-bottom: 1px solid var(--border);
+  padding: 14px 28px;
+  display: flex; align-items: center; gap: 28px;
+}
+.logo-block { display: flex; align-items: center; gap: 14px; flex-shrink: 0; }
+.logo-mark {
+  width: 32px; height: 32px;
+  border: 1.5px solid var(--c-bp); border-radius: 7px;
+  display: flex; align-items: center; justify-content: center;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 14px; font-weight: 700;
+  color: var(--c-bp); background: rgba(90,156,216,0.08);
+}
+.logo-text {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px; font-weight: 700;
+  letter-spacing: 0.16em;
+  color: var(--text-primary); text-transform: uppercase;
+}
+.logo-subtitle { font-size: 11px; color: var(--text-secondary); font-weight: 500; margin-top: 2px; }
+
+.search-wrap { flex: 1; max-width: 480px; position: relative; }
+.search-input {
+  width: 100%;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 40px 10px 40px;
+  color: var(--text-primary);
+  font-family: 'Manrope', sans-serif;
+  font-size: 13.5px; font-weight: 500;
+  transition: all 0.2s;
+}
+.search-input:focus {
+  outline: none; border-color: var(--accent);
+  background: rgba(255,224,102,0.05);
+  box-shadow: 0 0 0 4px rgba(255,224,102,0.08);
+}
+.search-input::placeholder { color: var(--text-tertiary); }
+.search-icon { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); font-size: 16px; color: var(--text-tertiary); pointer-events: none; }
+.search-clear {
+  position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
+  width: 24px; height: 24px; background: var(--border); border: none; border-radius: 50%;
+  color: var(--text-secondary); cursor: pointer; font-size: 14px; font-weight: 700;
+  display: none; align-items: center; justify-content: center;
+}
+.search-clear.visible { display: flex; }
+.search-clear:hover { background: var(--accent); color: #000; }
+.match-display { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--text-tertiary); letter-spacing: 0.05em; white-space: nowrap; }
+.match-display.has-matches { color: var(--accent); }
+
+/* ═══ VIEW SWITCHER ═══ */
+.view-switcher {
+  position: sticky; top: 60px; z-index: 99;
+  background: rgba(5,5,7,0.96);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border);
+  display: flex; gap: 0;
+  padding: 0 28px;
+}
+.view-tab {
+  background: transparent; border: none;
+  padding: 14px 24px;
+  display: flex; align-items: center; gap: 12px;
+  color: var(--text-tertiary); cursor: pointer;
+  border-bottom: 2px solid transparent;
+  font-family: 'Manrope', sans-serif;
+  transition: all 0.2s;
+  position: relative;
+}
+.view-tab:hover { color: var(--text-secondary); }
+.view-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+.view-tab .tab-icon { font-size: 16px; }
+.view-tab .tab-label { font-size: 13px; font-weight: 700; letter-spacing: 0.02em; }
+.view-tab .tab-desc { font-size: 11px; font-weight: 400; color: var(--text-tertiary); margin-left: 4px; }
+.view-tab.active .tab-desc { color: var(--text-secondary); }
+
+/* ═══ CONTROL BAR ═══ */
+.control-bar {
+  position: sticky; top: 110px; z-index: 98;
+  background: rgba(5,5,7,0.96);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border);
+  padding: 12px 28px;
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 24px; flex-wrap: wrap;
+}
+.stats { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.stat-pill {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10.5px; font-weight: 600; letter-spacing: 0.05em;
+  padding: 6px 11px; border-radius: 5px;
+  background: rgba(255,255,255,0.03); border: 1px solid var(--border);
+  color: var(--text-secondary); text-transform: uppercase;
+}
+.stat-pill b { color: var(--text-primary); font-weight: 800; margin: 0 4px; }
+.stat-pill.is-flag { color: var(--c-flag); border-color: rgba(255,144,64,0.25); background: rgba(255,144,64,0.06); }
+.stat-pill.is-tbd  { color: var(--c-tbd);  border-color: rgba(232,200,64,0.25); background: rgba(232,200,64,0.06); }
+.stat-pill.is-new  { color: var(--c-new);  border-color: rgba(74,218,138,0.25); background: rgba(74,218,138,0.06); }
+.stat-pill.is-rem  { color: var(--c-rem);  border-color: rgba(120,120,128,0.25); background: rgba(120,120,128,0.06); }
+.stat-pill.is-moved{ color: var(--c-moved);border-color: rgba(64,200,232,0.30);  background: rgba(64,200,232,0.07); }
+
+.filters { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+.chip {
+  font-family: 'Manrope', sans-serif; font-size: 11.5px; font-weight: 600; letter-spacing: 0.02em;
+  padding: 6px 14px; border-radius: 5px;
+  background: transparent; border: 1px solid var(--border);
+  color: var(--text-secondary); cursor: pointer; transition: all 0.15s;
+}
+.chip:hover { border-color: var(--text-secondary); color: var(--text-primary); }
+.chip.active { background: var(--accent); border-color: var(--accent); color: #1A1500; font-weight: 700; }
+
+/* ═══ INTRO HEADER ═══ */
+header.intro {
+  text-align: center;
+  padding: 32px 28px 24px;
+  border-bottom: 1px solid var(--border);
+}
+header.intro .eyebrow {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px; font-weight: 700; letter-spacing: 0.2em;
+  color: var(--text-tertiary); text-transform: uppercase; margin-bottom: 10px;
+}
+header.intro h1 {
+  font-size: 28px; font-weight: 800; letter-spacing: -0.02em;
+  color: var(--text-primary); margin-bottom: 10px;
+}
+header.intro .subtitle {
+  font-size: 13px; color: var(--text-secondary); font-weight: 400;
+  max-width: 720px; margin: 0 auto; line-height: 1.6;
+}
+
+/* ═══ VIEWS ═══ */
+.view { display: none; }
+.view.active { display: block; }
+
+/* ─── View 1: Source Map (existing SVG) ─── */
+.diagram-wrap {
+  background: var(--bg-canvas);
+  padding: 32px 16px 48px;
+  overflow-x: auto;
+}
+svg { display: block; margin: 0 auto; transition: opacity 0.2s; }
+
+.field-row { cursor: default; transition: opacity 0.25s; }
+.field-row .fr-bg { opacity: 0; transition: opacity 0.2s; }
+.field-row.match .fr-bg { opacity: 1; }
+.field-row.match .fr-text { fill: var(--accent) !important; font-weight: 800 !important; }
+.field-row.match .fr-bullet { fill: var(--accent) !important; }
+
+body.searching .field-row { opacity: 0.18; }
+body.searching .field-row.match { opacity: 1; }
+body.searching .node-group { transition: opacity 0.25s; opacity: 0.5; }
+body.searching .node-group.has-match { opacity: 1; }
+body.searching .node-group.has-match .node-glow { stroke: var(--accent) !important; stroke-width: 3 !important; }
+body.searching .connector { opacity: 0.25; }
+
+body.filter-flag .field-row:not(.status-flag),
+body.filter-tbd .field-row:not(.status-tbd),
+body.filter-new .field-row:not(.status-new),
+body.filter-rem .field-row:not(.status-rem),
+body.filter-moved .field-row:not(.status-moved) { opacity: 0.15; }
+
+.field-row:hover .fr-text { font-weight: 800; }
+.field-row:hover .fr-bg { opacity: 0.4; }
+
+/* ─── View 2: SOP Lookup ─── */
+.sop-intro {
+  text-align: center;
+  padding: 32px 28px 16px;
+  background: var(--bg-canvas);
+}
+.sop-intro .eyebrow {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px; font-weight: 700; letter-spacing: 0.2em;
+  color: var(--text-tertiary); text-transform: uppercase; margin-bottom: 10px;
+}
+.sop-intro h1 {
+  font-size: 26px; font-weight: 800; color: var(--text-primary);
+  letter-spacing: -0.02em; margin-bottom: 10px;
+}
+.sop-intro p {
+  font-size: 13px; color: var(--text-secondary); max-width: 640px;
+  margin: 0 auto; line-height: 1.6;
+}
+
+.sop-grid {
+  background: var(--bg-canvas);
+  padding: 24px 28px 48px;
+  column-count: 3;
+  column-gap: 18px;
+  max-width: 1900px;
+  margin: 0 auto;
+}
+@media (max-width: 1400px) { .sop-grid { column-count: 2; } }
+@media (max-width: 900px)  { .sop-grid { column-count: 1; } }
+
+.sop-section {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  margin-bottom: 18px;
+  break-inside: avoid;
+  overflow: hidden;
+  transition: border-color 0.2s;
+}
+.sop-section:hover { border-color: #2A2A30; }
+
+.sop-section-header {
+  padding: 12px 16px;
+  background: rgba(255,255,255,0.02);
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: space-between;
+}
+.sop-section-title {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px; font-weight: 700;
+  letter-spacing: 0.12em; text-transform: uppercase;
+  color: var(--accent);
+}
+.sop-section-count {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px; color: var(--text-tertiary);
+  letter-spacing: 0.05em;
+}
+
+.sop-fields { display: flex; flex-direction: column; }
+.sop-field {
+  display: flex; align-items: center; gap: 10px;
+  width: 100%;
+  padding: 9px 16px;
+  background: transparent; border: none;
+  border-bottom: 1px solid rgba(255,255,255,0.03);
+  text-align: left; cursor: pointer;
+  transition: all 0.15s;
+  font-family: 'Manrope', sans-serif;
+}
+.sop-field:last-child { border-bottom: none; }
+.sop-field:hover { background: var(--bg-card-hover); }
+.sop-field.active {
+  background: rgba(255,224,102,0.06);
+  border-left: 3px solid var(--accent);
+  padding-left: 13px;
+}
+
+.sf-name {
+  flex: 1; font-size: 12.5px; font-weight: 500; color: var(--text-primary);
+  line-height: 1.4;
+}
+.sop-field.is-rem .sf-name { color: var(--text-tertiary); text-decoration: line-through; }
+
+.sf-source {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px; font-weight: 700; letter-spacing: 0.05em;
+  padding: 3px 8px; border-radius: 3px; border: 1px solid;
+  white-space: nowrap; flex-shrink: 0;
+}
+.sf-source.s-blueprint { color: var(--c-bp);  background: var(--bg-bp);  border-color: var(--bd-bp); }
+.sf-source.s-variation { color: var(--c-var); background: var(--bg-var); border-color: var(--bd-var); }
+.sf-source.s-item      { color: var(--c-itm); background: var(--bg-itm); border-color: var(--bd-itm); }
+.sf-source.s-bom       { color: var(--c-bom); background: var(--bg-bom); border-color: var(--bd-bom); }
+.sf-source.s-bomline   { color: var(--c-bom); background: var(--bg-bom); border-color: var(--bd-bom); }
+.sf-source.s-rmitem    { color: var(--c-rm);  background: var(--bg-rm);  border-color: var(--bd-rm); }
+.sf-source.s-workorder { color: var(--c-wo);  background: var(--bg-wo);  border-color: var(--bd-wo); }
+.sf-source.s-customerorder { color: var(--c-co); background: var(--bg-co); border-color: var(--bd-co); }
+.sf-source.s-approval  { color: var(--c-ca);  background: var(--bg-ca);  border-color: var(--bd-ca); }
+.sf-source.s-autocalc  { color: var(--c-ac);  background: var(--bg-ac);  border-color: var(--bd-ac); }
+.sf-source.s-sop       { color: var(--c-sop); background: var(--bg-sop); border-color: var(--bd-sop); }
+.sf-source.s-tbd       { color: var(--c-tbd); background: var(--bg-tbd); border-color: var(--bd-tbd); }
+.sf-source.s-remove    { color: var(--c-rem); background: rgba(112,112,120,0.10); border-color: rgba(112,112,120,0.4); }
+
+.sf-status { font-size: 12px; flex-shrink: 0; width: 16px; text-align: center; }
+.sf-status.s-confirmed { color: var(--c-new); }
+.sf-status.s-flag { color: var(--c-flag); }
+.sf-status.s-tbd  { color: var(--c-tbd); }
+.sf-status.s-new  { color: var(--c-new); }
+.sf-status.s-rem  { color: var(--c-rem); }
+
+/* Filter mode for SOP fields */
+body.filter-flag .sop-field:not(.is-flag),
+body.filter-tbd .sop-field:not(.is-tbd),
+body.filter-new .sop-field:not(.is-new),
+body.filter-rem .sop-field:not(.is-rem),
+body.filter-moved .sop-field:not(.is-moved) { opacity: 0.2; }
+
+/* Search highlighting */
+.sop-field.match { background: rgba(255,224,102,0.08); border-left: 3px solid var(--accent); padding-left: 13px; }
+.sop-field.match .sf-name { color: var(--accent); font-weight: 700; }
+body.searching .sop-field { opacity: 0.2; }
+body.searching .sop-field.match { opacity: 1; }
+body.searching .sop-section { opacity: 0.7; }
+
+/* ═══ DETAIL PANEL ═══ */
+.detail-panel {
+  position: fixed; right: 0; top: 0; bottom: 0;
+  width: 440px; max-width: 92vw;
+  background: #0A0A0D;
+  border-left: 1px solid var(--border);
+  transform: translateX(100%);
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  z-index: 200;
+  overflow-y: auto;
+  box-shadow: -8px 0 32px rgba(0,0,0,0.5);
+}
+.detail-panel.open { transform: translateX(0); }
+
+.panel-close {
+  position: absolute; top: 16px; right: 16px;
+  width: 32px; height: 32px;
+  background: rgba(255,255,255,0.06); border: 1px solid var(--border);
+  border-radius: 6px; color: var(--text-secondary);
+  cursor: pointer; font-size: 16px; font-weight: 600;
+  display: flex; align-items: center; justify-content: center;
+  transition: all 0.15s;
+}
+.panel-close:hover { background: var(--accent); color: #000; border-color: var(--accent); }
+
+.panel-content { padding: 28px 28px 32px; }
+
+.panel-eyebrow {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px; font-weight: 700; letter-spacing: 0.18em;
+  color: var(--accent); text-transform: uppercase; margin-bottom: 10px;
+}
+.panel-section-name {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px; color: var(--text-tertiary);
+  letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 8px;
+}
+.panel-field-name {
+  font-size: 24px; font-weight: 800; line-height: 1.2;
+  color: var(--text-primary); margin-bottom: 28px;
+  letter-spacing: -0.01em;
+}
+
+.panel-row {
+  margin-bottom: 22px;
+}
+.panel-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px; font-weight: 700;
+  letter-spacing: 0.15em; text-transform: uppercase;
+  color: var(--text-tertiary);
+  margin-bottom: 8px;
+}
+.panel-source {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 10px 14px;
+  border-radius: 6px;
+  border: 1px solid;
+  font-weight: 700; font-size: 14px;
+}
+.panel-source-icon {
+  width: 8px; height: 8px; border-radius: 2px;
+  background: currentColor;
+}
+.panel-method {
+  font-size: 13px; color: var(--text-primary); line-height: 1.5;
+  padding: 10px 14px; background: rgba(255,255,255,0.03);
+  border: 1px solid var(--border); border-radius: 6px;
+}
+.panel-status {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 8px 14px; border-radius: 6px;
+  font-size: 13px; font-weight: 600;
+}
+.panel-status.s-confirmed { color: var(--c-new); background: rgba(74,218,138,0.10); border: 1px solid rgba(74,218,138,0.3); }
+.panel-status.s-flag { color: var(--c-flag); background: rgba(255,144,64,0.10); border: 1px solid rgba(255,144,64,0.3); }
+.panel-status.s-tbd { color: var(--c-tbd); background: rgba(232,200,64,0.10); border: 1px solid rgba(232,200,64,0.3); }
+.panel-status.s-new { color: var(--c-new); background: rgba(74,218,138,0.10); border: 1px solid rgba(74,218,138,0.3); }
+.panel-status.s-rem { color: var(--c-rem); background: rgba(112,112,120,0.10); border: 1px solid rgba(112,112,120,0.3); }
+
+.panel-notes {
+  font-size: 12.5px; color: var(--text-secondary); line-height: 1.55;
+  padding: 12px 14px; background: rgba(255,224,102,0.04);
+  border: 1px solid rgba(255,224,102,0.15); border-radius: 6px;
+  font-style: italic;
+}
+
+.panel-flow {
+  background: var(--bg-canvas);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 16px;
+  display: flex; flex-direction: column; gap: 8px;
+}
+.flow-step {
+  display: flex; align-items: center; gap: 12px;
+  padding: 8px 12px;
+  border-radius: 5px; border: 1px solid;
+  font-size: 12px; font-weight: 600;
+}
+.flow-step .step-icon {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px; font-weight: 700;
+  padding: 3px 7px; border-radius: 3px;
+  background: currentColor;
+}
+.flow-step .step-icon span { color: #000; }
+.flow-step .step-name { flex: 1; }
+.flow-step .step-meta { font-size: 10px; opacity: 0.7; font-weight: 500; }
+.flow-arrow {
+  text-align: center;
+  color: var(--text-tertiary);
+  font-size: 14px;
+}
+
+.panel-action {
+  width: 100%;
+  padding: 14px 18px;
+  background: var(--accent);
+  color: #1A1500;
+  border: none; border-radius: 6px;
+  font-family: 'Manrope', sans-serif;
+  font-size: 13px; font-weight: 700;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  transition: all 0.15s;
+  margin-top: 8px;
+}
+.panel-action:hover { background: #FFD840; transform: translateY(-1px); }
+.panel-action:active { transform: translateY(0); }
+
+/* ═══ FOOTER ═══ */
+footer {
+  text-align: center;
+  padding: 28px 20px;
+  background: var(--bg-canvas);
+  border-top: 1px solid var(--border);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px; color: var(--text-tertiary);
+  letter-spacing: 0.1em;
+}
+.key-hint {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px; color: var(--text-tertiary);
+  margin-top: 6px;
+}
+kbd {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px;
+  background: rgba(255,255,255,0.05); border: 1px solid var(--border);
+  border-radius: 3px; padding: 2px 6px;
+  color: var(--text-secondary); margin: 0 2px;
+}
+</style>
+</head>
+<body>
+
+<!-- ═══ TOP BAR ═══ -->
+<header class="topbar">
+  <div class="logo-block">
+    <div class="logo-mark">S</div>
+    <div>
+      <div class="logo-text">Sojo Industries</div>
+      <div class="logo-subtitle">Blueprint Field Source Map</div>
+    </div>
+  </div>
+  <div class="search-wrap">
+    <span class="search-icon">⌕</span>
+    <input id="search" class="search-input" placeholder="Search any field — e.g. 'pallet', 'lot code', 'headcount'..." autocomplete="off"/>
+    <button id="clear" class="search-clear" aria-label="Clear search">×</button>
+  </div>
+  <div class="match-display" id="matchDisplay">Type to search · ⌘K</div>
+</header>
+
+<!-- ═══ VIEW SWITCHER ═══ -->
+<nav class="view-switcher">
+  <button class="view-tab active" data-view="map">
+    <span class="tab-icon">◈</span>
+    <span class="tab-label">Source Map</span>
+    <span class="tab-desc">By record · diagram view</span>
+  </button>
+  <button class="view-tab" data-view="lookup">
+    <span class="tab-icon">⌕</span>
+    <span class="tab-label">SOP Field Lookup</span>
+    <span class="tab-desc">Click any field to trace its source</span>
+  </button>
+</nav>
+
+<!-- ═══ CONTROL BAR ═══ -->
+<div class="control-bar">
+  <div class="stats" id="stats"></div>
+  <div class="filters" id="filters">
+    <button class="chip active" data-filter="all">All Fields</button>
+    <button class="chip" data-filter="flag">⚑ Flagged Only</button>
+    <button class="chip" data-filter="tbd">◈ TBD Only</button>
+    <button class="chip" data-filter="new">✦ New Only</button>
+    <button class="chip" data-filter="rem">✕ Remove Only</button>
+    <button class="chip" data-filter="moved">⤴ Moved Only</button>
+  </div>
+</div>
+
+<!-- ═══ VIEW 1: SOURCE MAP ═══ -->
+<div class="view view-map active" id="view-map">
+  <header class="intro">
+    <div class="eyebrow">Source Map · Draft v0.3</div>
+    <h1>Where every SOP field lives — and where it comes from</h1>
+    <div class="subtitle">
+      Each node below contains all the SOP fields it owns. The SOP at the bottom auto-assembles from every node above it.
+      Click a node to focus it. Use the search bar to instantly locate any field.
+    </div>
+  </header>
+  <div class="diagram-wrap">
+    <svg id="d" xmlns="http://www.w3.org/2000/svg"></svg>
+  </div>
+</div>
+
+<!-- ═══ VIEW 2: SOP FIELD LOOKUP ═══ -->
+<div class="view view-lookup" id="view-lookup">
+  <header class="sop-intro">
+    <div class="eyebrow">SOP Field Lookup · Draft v0.3</div>
+    <h1>The full SOP record — click any field to trace its source</h1>
+    <p>Every field on the actual SOP record, organized by section. Click any field to see its source record, populate method, and process flow.</p>
+  </header>
+  <div class="sop-grid" id="sopGrid"></div>
+</div>
+
+<!-- ═══ DETAIL PANEL ═══ -->
+<aside class="detail-panel" id="detailPanel">
+  <button class="panel-close" id="panelClose">×</button>
+  <div class="panel-content" id="panelContent"></div>
+</aside>
+
+<!-- ═══ FOOTER ═══ -->
+<footer>
+  Sojo Industries · Blueprint Field Source Map · Confidential — Draft v0.3
+  <div class="key-hint">
+    <kbd>/</kbd> or <kbd>⌘K</kbd> to search ·
+    <kbd>Esc</kbd> to clear ·
+    Click a node or field for details
+  </div>
+</footer>
+
+<script>
+/* ════════════════════════════════════════════════════════════════════════════
+   SOURCE RECORD METADATA
+═══════════════════════════════════════════════════════════════════════════ */
+const SOURCES = {
+  blueprint:     { label: 'Blueprint',         shortLabel: 'BLUEPRINT',      color: '#5A9CD8', flow: ['Blueprint', 'SOP'] },
+  variation:     { label: 'Variation / PC',    shortLabel: 'VARIATION',      color: '#D4A830', flow: ['Variation', 'SOP'] },
+  item:          { label: 'Item',              shortLabel: 'ITEM',           color: '#5ACA5A', flow: ['Item', 'SOP'] },
+  bom:           { label: 'Bill of Materials', shortLabel: 'BOM',            color: '#4ACAC8', flow: ['BOM', 'SOP'] },
+  bomline:       { label: 'BOM Revision',      shortLabel: 'BOM REVISION',   color: '#4ACAC8', flow: ['BOM Revision', 'BOM', 'SOP'] },
+  rmitem:        { label: 'RM Item',           shortLabel: 'RM ITEM',        color: '#E898D0', flow: ['RM Item', 'BOM Revision', 'BOM', 'SOP'] },
+  pkgitem:       { label: 'Packaging Material', shortLabel: 'PKG MATERIAL',   color: '#E8A858', flow: ['Packaging Material', 'BOM Revision', 'BOM', 'SOP'] },
+  workorder:     { label: 'Work Order',        shortLabel: 'WORK ORDER',     color: '#E07A7A', flow: ['Variation', 'Work Order', 'SOP'] },
+  customerorder: { label: 'Customer Order',    shortLabel: 'CUSTOMER ORDER', color: '#B8A0E8', flow: ['Customer Order', 'SOP'] },
+  approval:      { label: 'Customer Approval', shortLabel: 'APPROVAL',       color: '#FFA070', flow: ['Customer Approval', 'SOP'] },
+  autocalc:      { label: 'Auto-Calculated',   shortLabel: 'AUTO-CALC',      color: '#9090A0', flow: ['Auto-Calc', 'SOP'] },
+  sop:           { label: 'SOP (manual)',      shortLabel: 'SOP',            color: '#A0B0F0', flow: ['SOP'] },
+  tbd:           { label: 'Blueprint or Item', shortLabel: 'TBD',            color: '#E8C840', flow: ['(Decision Pending)', 'SOP'] },
+  remove:        { label: 'Remove from SOP',   shortLabel: 'REMOVE',         color: '#707078', flow: ['(Field to be removed)'] },
+};
+
+/* ════════════════════════════════════════════════════════════════════════════
+   SOP FIELDS — Master data
+   Every field on the actual SOP record with its source, method, and status
+═══════════════════════════════════════════════════════════════════════════ */
+const SOP_FIELDS = [
+  /* ─── Primary Information ─────────────────────────────────────────────── */
+  { name: 'SOP Creator', section: 'Primary Information', source: 'autocalc', method: 'System auto-generates from logged-in user', status: 'rem', notes: 'Recommend removing — system tracks this natively' },
+  { name: 'SOW Signed Status', section: 'Primary Information', source: 'variation', method: 'Auto from Variation / PC (links to Customer Approval)', status: 'confirmed' },
+  { name: 'Customer Printout', section: 'Primary Information', source: 'remove', method: 'Remove field — no longer needed on SOP', status: 'rem', notes: 'Field to be removed from the SOP record' },
+  { name: 'Operations Printout', section: 'Primary Information', source: 'autocalc', method: 'Auto-generated when the SOP record is created', status: 'confirmed' },
+  { name: 'Published', section: 'Primary Information', source: 'autocalc', method: 'Auto-trigger when Work Order activates?', status: 'flag', notes: 'Decision needed — auto-publish or manual?' },
+  { name: 'Name', section: 'Primary Information', source: 'autocalc', method: 'Auto-generated on record creation', status: 'flag', notes: 'Naming convention TBD — what format does Ops need?' },
+  { name: 'Pricing Calculator', section: 'Primary Information', source: 'variation', method: 'Auto from Variation', status: 'confirmed' },
+  { name: 'Pricing Calculator ID', section: 'Primary Information', source: 'variation', method: 'Auto from Variation', status: 'confirmed' },
+  { name: 'Second Touch', section: 'Primary Information', source: 'variation', method: 'Auto from Variation / Pricing Calc', status: 'confirmed' },
+  { name: 'VP#', section: 'Primary Information', source: 'item', method: 'Auto from Item — specific item selected via Customer Order', status: 'confirmed' },
+  { name: 'Customer Name', section: 'Primary Information', source: 'blueprint', method: 'Auto from Blueprint', status: 'confirmed' },
+  { name: 'SSA', section: 'Primary Information', source: 'blueprint', method: 'Auto from Blueprint — NEW field to be added', status: 'new', notes: 'New field to be added to the Blueprint record' },
+  { name: 'VP Name / Description (Sojo)', section: 'Primary Information', source: 'item', method: 'Auto from Item record', status: 'confirmed' },
+  { name: 'Status', section: 'Primary Information', source: 'autocalc', method: 'Auto-calculated — derived from Work Order status', status: 'flag', notes: 'Decision pending — do we need this on the SOP at all?' },
+  { name: 'Customer Approved', section: 'Primary Information', source: 'autocalc', method: 'Auto-derived from project approval gate', status: 'flag', notes: 'Decision pending — Customer Order cannot be created without approval, so all SOPs are customer approved by definition. Do we need this on the SOP record?' },
+  { name: 'Date Created', section: 'Primary Information', source: 'autocalc', method: 'System auto-stamp', status: 'rem' },
+  { name: 'Last Modified', section: 'Primary Information', source: 'autocalc', method: 'System auto-stamp', status: 'rem' },
+  { name: 'By', section: 'Primary Information', source: 'autocalc', method: 'System auto-tracks user', status: 'rem' },
+
+  /* ─── Headcounts ──────────────────────────────────────────────────────── */
+  { name: 'Headcount', section: 'Headcounts', source: 'workorder', method: 'Auto from Work Order — Headcount flows: Variation → Customer Order → Work Order → SOP', status: 'confirmed' },
+  { name: 'Total Number of People', section: 'Headcounts', source: 'autocalc', method: 'Auto-calc — sum of all headcount role fields', status: 'confirmed' },
+
+  /* ─── Summary ─────────────────────────────────────────────────────────── */
+  { name: 'Customer SOP Version', section: 'Summary', source: 'sop', method: 'Manual on SOP — or remove?', status: 'flag', notes: 'Decision pending — do we need this? NetSuite record history may replace it' },
+  { name: 'Inbound WIP', section: 'Summary', source: 'variation', method: 'Auto from Variation Customer Materials field', status: 'confirmed', notes: 'Field name needs alignment with Variation' },
+  { name: 'Reuse Inbound Trays', section: 'Summary', source: 'variation', method: 'Auto from Variation', status: 'confirmed' },
+  { name: 'Printout', section: 'Summary', source: 'blueprint', method: 'Auto — purpose unclear', status: 'flag', notes: 'Need to clarify what this field actually controls' },
+  { name: 'Engineering Notes', section: 'Summary', source: 'variation', method: 'Auto from Variation', status: 'confirmed' },
+  { name: 'Operations Notes', section: 'Summary', source: 'variation', method: 'Auto from Variation', status: 'confirmed' },
+  { name: 'Project Summary', section: 'Summary', source: 'variation', method: 'Auto from Variation', status: 'confirmed' },
+  { name: 'Item Format', section: 'Summary', source: 'blueprint', method: 'Auto from Blueprint', status: 'confirmed' },
+  { name: 'Size', section: 'Summary', source: 'blueprint', method: 'Auto from Blueprint', status: 'confirmed' },
+  { name: 'Container Spec', section: 'Summary', source: 'blueprint', method: 'Auto from Blueprint', status: 'confirmed' },
+  { name: 'Container', section: 'Summary', source: 'blueprint', method: 'Auto from Blueprint', status: 'confirmed' },
+
+  /* ─── Production ──────────────────────────────────────────────────────── */
+  { name: 'Location', section: 'Production', source: 'workorder', method: 'Auto from WO (Actual Location) — Variation has Location Assumption', status: 'flag', notes: 'Decision: Variation OR Customer Order? Affects location-based pricing model' },
+  { name: 'Machine Model', section: 'Production', source: 'workorder', method: 'Auto from WO (Actual Machine Model) — Variation has Machine Model Assumption', status: 'confirmed' },
+  { name: 'Bay', section: 'Production', source: 'customerorder', method: 'Defined at Customer Order level', status: 'confirmed' },
+  { name: 'Layout', section: 'Production', source: 'variation', method: 'Auto from Variation', status: 'confirmed' },
+  { name: 'Machine Setpoint CPM Default', section: 'Production', source: 'workorder', method: 'Auto from WO (Actual Setpoint CPM) — Variation has Setpoint CPM Assumption', status: 'confirmed' },
+  { name: 'Goal Cases Per Shift', section: 'Production', source: 'workorder', method: 'Auto from Work Order — Goal Cases flows: Variation → Customer Order → Work Order → SOP', status: 'confirmed' },
+  { name: 'Bill of Materials', section: 'Production', source: 'bom', method: 'Auto from BOM record', status: 'confirmed' },
+  { name: 'Cornerboards', section: 'Production', source: 'bomline', method: 'Auto from BOM Revision components sublist', status: 'confirmed' },
+  { name: 'Slipsheet Requirements', section: 'Production', source: 'bomline', method: 'Auto from BOM Revision components sublist', status: 'confirmed' },
+  { name: 'Tray Die Lines', section: 'Production', source: 'variation', method: 'Auto from Variation', status: 'confirmed' },
+  { name: 'Carton Die Lines', section: 'Production', source: 'variation', method: 'Auto from Variation', status: 'confirmed' },
+  { name: 'Shrink Film Specs', section: 'Production', source: 'variation', method: 'Auto from Variation', status: 'confirmed' },
+  { name: 'Pallet WIP Stack Height', section: 'Production', source: 'blueprint', method: 'Auto from Blueprint — moved from RM Item', status: 'confirmed' },
+  { name: 'Pallet Finished Good Stack Height', section: 'Production', source: 'blueprint', method: 'Auto from Blueprint — moved from Item', status: 'confirmed' },
+  { name: 'WIP Pallet Type', section: 'Production', source: 'rmitem', method: 'Auto from RM Item record', status: 'confirmed' },
+  { name: 'Finished Pallet Type', section: 'Production', source: 'item', method: 'Auto from Item — required field on Item record', status: 'confirmed' },
+  { name: 'Finished Pallet Pattern', section: 'Production', source: 'variation', method: 'Auto from Variation', status: 'confirmed' },
+  { name: 'Pallet Tag', section: 'Production', source: 'variation', method: 'Auto from Variation', status: 'flag', notes: 'Do we need this field? Confirm or remove' },
+  { name: 'Finished Pallet Qty', section: 'Production', source: 'variation', method: 'Auto from Variation (Cases per Pallet)', status: 'confirmed' },
+  { name: 'Pallet Configuration', section: 'Production', source: 'autocalc', method: 'Calculated — formula TBD', status: 'flag', notes: 'Define the calculation: Pallet Qty ÷ Stack Height?' },
+  { name: 'Finished System Lot Code Format', section: 'Production', source: 'blueprint', method: 'Auto from Blueprint', status: 'confirmed' },
+  { name: 'Finished System Lot Code Format Description', section: 'Production', source: 'blueprint', method: 'Auto from Blueprint', status: 'confirmed' },
+  { name: 'WIP System Lot Code Format', section: 'Production', source: 'blueprint', method: 'Auto from Blueprint', status: 'confirmed' },
+  { name: 'WIP System Lot Code Format Description', section: 'Production', source: 'blueprint', method: 'Auto from Blueprint', status: 'confirmed' },
+  { name: 'Inbound WIP Lot Location', section: 'Production', source: 'blueprint', method: 'Auto from Blueprint', status: 'confirmed' },
+
+  /* ─── Printed Lot Format ──────────────────────────────────────────────── */
+  { name: 'Lot 1 Placement', section: 'Printed Lot Format', source: 'blueprint', method: 'Auto from Blueprint', status: 'confirmed' },
+  { name: 'Lot 1 Format', section: 'Printed Lot Format', source: 'blueprint', method: 'Auto from Blueprint', status: 'confirmed' },
+  { name: 'Lot 1 Description', section: 'Printed Lot Format', source: 'blueprint', method: 'Auto from Blueprint', status: 'confirmed' },
+  { name: 'Lot 1 Example', section: 'Printed Lot Format', source: 'blueprint', method: 'Auto from Blueprint', status: 'confirmed' },
+  { name: 'Lot 1 Notes', section: 'Printed Lot Format', source: 'blueprint', method: 'Auto from Blueprint', status: 'confirmed' },
+  { name: 'Lot 1 Image', section: 'Printed Lot Format', source: 'blueprint', method: 'Auto from Blueprint', status: 'confirmed' },
+  { name: 'Lot 2 Placement', section: 'Printed Lot Format', source: 'blueprint', method: 'Auto from Blueprint', status: 'confirmed' },
+  { name: 'Lot 2 Lot Format', section: 'Printed Lot Format', source: 'blueprint', method: 'Auto from Blueprint', status: 'confirmed' },
+  { name: 'Lot 2 Description', section: 'Printed Lot Format', source: 'blueprint', method: 'Auto from Blueprint', status: 'confirmed' },
+  { name: 'Lot 2 Example', section: 'Printed Lot Format', source: 'blueprint', method: 'Auto from Blueprint', status: 'confirmed' },
+  { name: 'Lot 2 Notes', section: 'Printed Lot Format', source: 'blueprint', method: 'Auto from Blueprint', status: 'confirmed' },
+  { name: 'Lot 2 Image', section: 'Printed Lot Format', source: 'blueprint', method: 'Auto from Blueprint', status: 'confirmed' },
+  { name: 'No Printed Lot Code Required', section: 'Printed Lot Format', source: 'blueprint', method: 'Auto from Blueprint', status: 'confirmed' },
+
+  /* ─── Case Labels ─────────────────────────────────────────────────────── */
+  { name: 'Case Label 1 Qty', section: 'Case Labels', source: 'variation', method: 'Auto from Variation (sourced from intake form)', status: 'confirmed' },
+  { name: 'Case Label 1 Size', section: 'Case Labels', source: 'variation', method: 'Auto from Variation (sourced from intake form)', status: 'confirmed' },
+  { name: 'Case Label 1 Placement', section: 'Case Labels', source: 'variation', method: 'Auto from Variation (sourced from intake form)', status: 'confirmed' },
+  { name: 'Case Label 1 Notes', section: 'Case Labels', source: 'variation', method: 'Auto from Variation (sourced from intake form)', status: 'confirmed' },
+  { name: 'Case Label 1 Image', section: 'Case Labels', source: 'variation', method: 'Auto from Variation (sourced from intake form)', status: 'confirmed' },
+  { name: 'Case Label 1 Download', section: 'Case Labels', source: 'variation', method: 'Auto from Variation (sourced from intake form)', status: 'confirmed' },
+  { name: 'Case Label 2 Qty', section: 'Case Labels', source: 'variation', method: 'Auto from Variation (sourced from intake form)', status: 'confirmed' },
+  { name: 'Case Label 2 Size', section: 'Case Labels', source: 'variation', method: 'Auto from Variation (sourced from intake form)', status: 'confirmed' },
+  { name: 'Case Label 2 Placement', section: 'Case Labels', source: 'variation', method: 'Auto from Variation (sourced from intake form)', status: 'confirmed' },
+  { name: 'Case Label 2 Notes', section: 'Case Labels', source: 'variation', method: 'Auto from Variation (sourced from intake form)', status: 'confirmed' },
+  { name: 'Case Label 2 Image', section: 'Case Labels', source: 'variation', method: 'Auto from Variation (sourced from intake form)', status: 'confirmed' },
+  { name: 'Case Label 2 Download', section: 'Case Labels', source: 'variation', method: 'Auto from Variation (sourced from intake form)', status: 'confirmed' },
+  { name: 'No Case Label Required', section: 'Case Labels', source: 'variation', method: 'Auto from Variation override', status: 'confirmed' },
+
+  /* ─── Outbounds ───────────────────────────────────────────────────────── */
+  { name: 'Outbound Load Requirements', section: 'Outbounds', source: 'blueprint', method: 'Auto from Blueprint default — overridable on Customer Order', status: 'confirmed' },
+  { name: 'Airbag Qty', section: 'Outbounds', source: 'blueprint', method: 'Auto from Blueprint', status: 'confirmed' },
+  { name: 'Outbound Load Details', section: 'Outbounds', source: 'blueprint', method: 'Auto from Blueprint default', status: 'confirmed' },
+  { name: 'Outbound Load Pattern', section: 'Outbounds', source: 'blueprint', method: 'Auto from Blueprint default', status: 'confirmed' },
+  { name: 'Pallet Placard Instructions', section: 'Outbounds', source: 'blueprint', method: 'Auto from Blueprint', status: 'confirmed' },
+  { name: 'Pallet Placard', section: 'Outbounds', source: 'blueprint', method: 'Auto from Blueprint (asset)', status: 'confirmed' },
+
+  /* ─── Notes / Admin ───────────────────────────────────────────────────── */
+  { name: 'Additional Notes', section: 'Notes / Admin', source: 'workorder', method: 'Manual — entered at Work Order per run', status: 'confirmed' },
+  { name: 'Additional Photo / File', section: 'Notes / Admin', source: 'workorder', method: 'Manual — uploaded at Work Order per run', status: 'confirmed' },
+  { name: 'Inactive', section: 'Notes / Admin', source: 'sop', method: 'SOP lifecycle flag', status: 'confirmed' },
+  { name: 'Bom Revision', section: 'Notes / Admin', source: 'bomline', method: 'Auto from BOM Revision record (version/Name field)', status: 'confirmed' },
+  { name: 'SOP Docusign Contract', section: 'Notes / Admin', source: 'remove', method: 'Lives on Customer Approval — not SOP', status: 'rem', notes: 'Already exists on Customer Approval entity' },
+  { name: 'Project Format', section: 'Notes / Admin', source: 'autocalc', method: 'Auto-calc from Item Format?', status: 'flag', notes: 'Confirm if derived or remove entirely' },
+  { name: 'SOP Print', section: 'Notes / Admin', source: 'sop', method: 'Manual print trigger', status: 'flag', notes: 'Confirm if still in use — who triggers a print?' },
+
+  /* ─── BOM Revision Sublist ────────────────────────────────────────────── */
+  { name: 'Item (BOM Sublist)', section: 'BOM Revision Sublist', source: 'item', method: 'Component item link — one row per component', status: 'confirmed' },
+  { name: 'Customer Item # (BOM Sublist)', section: 'BOM Revision Sublist', source: 'item', method: 'Auto from component Item record', status: 'confirmed' },
+  { name: 'BOM Quantity (BOM Sublist)', section: 'BOM Revision Sublist', source: 'bomline', method: 'Set per component row in BOM Revision', status: 'confirmed' },
+  { name: 'Quantity (BOM Sublist)', section: 'BOM Revision Sublist', source: 'bomline', method: 'Set per component row in BOM Revision', status: 'confirmed' },
+  { name: 'Units (BOM Sublist)', section: 'BOM Revision Sublist', source: 'bomline', method: 'Set per component row in BOM Revision', status: 'confirmed' },
+  { name: 'Item Source (BOM Sublist)', section: 'BOM Revision Sublist', source: 'bomline', method: 'Stock / Phantom / Work Order — set per row', status: 'confirmed' },
+  { name: 'Item Display Name (BOM Sublist)', section: 'BOM Revision Sublist', source: 'item', method: 'Auto from component Item record', status: 'confirmed' },
+];
+
+/* ════════════════════════════════════════════════════════════════════════════
+   BUILD SOP LOOKUP VIEW
+═══════════════════════════════════════════════════════════════════════════ */
+function buildSopLookup() {
+  const grid = document.getElementById('sopGrid');
+  /* Group fields by section */
+  const sections = {};
+  SOP_FIELDS.forEach(f => {
+    if (!sections[f.section]) sections[f.section] = [];
+    sections[f.section].push(f);
+  });
+
+  /* Render each section as a card */
+  Object.keys(sections).forEach(secName => {
+    const fields = sections[secName];
+    const card = document.createElement('div');
+    card.className = 'sop-section';
+
+    const header = document.createElement('div');
+    header.className = 'sop-section-header';
+    header.innerHTML = `
+      <div class="sop-section-title">${secName}</div>
+      <div class="sop-section-count">${fields.length} field${fields.length === 1 ? '' : 's'}</div>
+    `;
+    card.appendChild(header);
+
+    const fieldList = document.createElement('div');
+    fieldList.className = 'sop-fields';
+
+    fields.forEach((f, idx) => {
+      const src = SOURCES[f.source];
+      const stIcon = f.status === 'confirmed' ? '✓' :
+                     f.status === 'flag' ? '⚑' :
+                     f.status === 'tbd'  ? '◈' :
+                     f.status === 'new'  ? '✦' :
+                     f.status === 'rem'  ? '✕' :
+                     f.status === 'moved'? '⤴' : '';
+
+      const btn = document.createElement('button');
+      btn.className = `sop-field is-${f.status}`;
+      btn.dataset.fieldIdx = SOP_FIELDS.indexOf(f);
+      btn.dataset.field = f.name.toLowerCase();
+      btn.innerHTML = `
+        <span class="sf-name">${f.name}</span>
+        <span class="sf-source s-${f.source}">${src.shortLabel}</span>
+        <span class="sf-status s-${f.status}">${stIcon}</span>
+      `;
+      btn.addEventListener('click', () => openDetailPanel(f, btn));
+      fieldList.appendChild(btn);
+    });
+
+    card.appendChild(fieldList);
+    grid.appendChild(card);
+  });
+}
+
+/* ════════════════════════════════════════════════════════════════════════════
+   DETAIL PANEL
+═══════════════════════════════════════════════════════════════════════════ */
+function openDetailPanel(field, btnEl) {
+  const panel = document.getElementById('detailPanel');
+  const content = document.getElementById('panelContent');
+  const src = SOURCES[field.source];
+
+  /* Mark active field */
+  document.querySelectorAll('.sop-field.active').forEach(b => b.classList.remove('active'));
+  if (btnEl) btnEl.classList.add('active');
+
+  const stLabel = field.status === 'confirmed' ? '✓ Confirmed' :
+                  field.status === 'flag' ? '⚑ Flagged — decision needed' :
+                  field.status === 'tbd'  ? '◈ TBD — Blueprint or Item' :
+                  field.status === 'new'  ? '✦ New field required' :
+                  field.status === 'rem'  ? '✕ Remove from SOP' :
+                  field.status === 'moved'? '⤴ Moved — see notes for original record' : '';
+
+  /* Build flow visualization */
+  const flowHTML = src.flow.map((step, i) => {
+    const isLast = i === src.flow.length - 1;
+    const isCurrent = step === src.label || (step === 'Variation' && field.source === 'variation');
+    const stepColor = isLast ? '#C078F0' : (i === 0 ? src.color : '#666');
+
+    return `
+      <div class="flow-step" style="color:${stepColor};background:${stepColor}10;border-color:${stepColor}50">
+        <span class="step-icon" style="background:${stepColor}30"><span style="color:${stepColor}">${i+1}</span></span>
+        <span class="step-name">${step}</span>
+        ${isLast ? '<span class="step-meta">Output</span>' : (i === 0 ? '<span class="step-meta">Source</span>' : '')}
+      </div>
+      ${!isLast ? '<div class="flow-arrow">↓</div>' : ''}
+    `;
+  }).join('');
+
+  content.innerHTML = `
+    <div class="panel-eyebrow">SOP Field Details</div>
+    <div class="panel-section-name">${field.section}</div>
+    <h2 class="panel-field-name">${field.name}</h2>
+
+    <div class="panel-row">
+      <div class="panel-label">Source Record</div>
+      <div class="panel-source" style="color:${src.color};background:${src.color}12;border-color:${src.color}50">
+        <div class="panel-source-icon"></div>
+        ${src.label}
+      </div>
+    </div>
+
+    <div class="panel-row">
+      <div class="panel-label">How It Populates</div>
+      <div class="panel-method">${field.method}</div>
+    </div>
+
+    <div class="panel-row">
+      <div class="panel-label">Status</div>
+      <div class="panel-status s-${field.status}">${stLabel}</div>
+    </div>
+
+    ${field.notes ? `
+      <div class="panel-row">
+        <div class="panel-label">Notes</div>
+        <div class="panel-notes">${field.notes}</div>
+      </div>
+    ` : ''}
+
+    <div class="panel-row">
+      <div class="panel-label">Process Flow — Source to SOP</div>
+      <div class="panel-flow">
+        ${flowHTML}
+      </div>
+    </div>
+
+    <button class="panel-action" onclick="locateInSourceMap('${field.name.replace(/'/g, "\\'")}')">
+      <span>Locate in Source Map</span>
+      <span>→</span>
+    </button>
+  `;
+
+  panel.classList.add('open');
+}
+
+function closeDetailPanel() {
+  document.getElementById('detailPanel').classList.remove('open');
+  document.querySelectorAll('.sop-field.active').forEach(b => b.classList.remove('active'));
+}
+
+document.getElementById('panelClose').addEventListener('click', closeDetailPanel);
+
+/* Click outside panel to close */
+document.addEventListener('click', e => {
+  const panel = document.getElementById('detailPanel');
+  if (panel.classList.contains('open') &&
+      !panel.contains(e.target) &&
+      !e.target.closest('.sop-field')) {
+    closeDetailPanel();
+  }
+});
+
+/* Locate in Source Map — switches view + triggers search */
+function locateInSourceMap(fieldName) {
+  /* Switch to map view */
+  document.querySelectorAll('.view-tab').forEach(t => t.classList.remove('active'));
+  document.querySelector('[data-view="map"]').classList.add('active');
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.getElementById('view-map').classList.add('active');
+
+  /* Trigger search for the field name */
+  const searchInput = document.getElementById('search');
+  searchInput.value = fieldName;
+  searchInput.dispatchEvent(new Event('input'));
+
+  /* Close panel */
+  closeDetailPanel();
+
+  /* Smooth scroll to top */
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+/* ════════════════════════════════════════════════════════════════════════════
+   VIEW SWITCHER
+═══════════════════════════════════════════════════════════════════════════ */
+document.querySelectorAll('.view-tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.view-tab').forEach(t => t.classList.remove('active'));
+    tab.classList.add('active');
+
+    const targetView = tab.dataset.view;
+    document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+    document.getElementById('view-' + targetView).classList.add('active');
+
+    closeDetailPanel();
+  });
+});
+
+/* ════════════════════════════════════════════════════════════════════════════
+   SVG DIAGRAM (Source Map View)
+═══════════════════════════════════════════════════════════════════════════ */
+(function(){
+  const NS='http://www.w3.org/2000/svg';
+  const svg=document.getElementById('d');
+  const F="'Manrope',sans-serif";
+
+  const C={
+    bg:'#050505',
+    bpBg:'#06121F', bpBdr:'#3A6FAA', bpTxt:'#92CCF0', bpDim:'#5588B0', bpGlow:'#0A1C38',
+    varBg:'#100A00', varBdr:'#B08810', varTxt:'#E8C040', varDim:'#A88828',
+    itmBg:'#04100A', itmBdr:'#3AB838', itmTxt:'#90E090', itmDim:'#58A858',
+    bomBg:'#04120F', bomBdr:'#1AB0B0', bomTxt:'#5ADADA', bomDim:'#38A0A0',
+    rmBg:'#180416',  rmBdr:'#C048A0',  rmTxt:'#E898D0',  rmDim:'#9860A0',
+    pkgBg:'#180D02', pkgBdr:'#A8631A', pkgTxt:'#E8A858', pkgDim:'#B07C30',
+    caBg:'#1F0A04',  caBdr:'#E06330',  caTxt:'#FFA070',
+    coBg:'#1A0F38',  coBdr:'#7A50D0',  coTxt:'#C8B0F0',  coDim:'#9080C8',
+    woBg:'#180404',  woBdr:'#A02828',  woTxt:'#E08080',  woDim:'#B05858',
+    sopBg:'#0E0E22', sopBdr:'#5060D0', sopTxt:'#A0B0F0', sopDim:'#7888C0',
+    acBg:'#0C0C0E',  acBdr:'#404048',  acTxt:'#9090A0',  acDim:'#606068',
+    con:'#1E1E22',   conH:'#2A2A30',
+    flag:'#FF9040',  tbd:'#E8C840',    newf:'#4ADA8A',   rem:'#707078',
+    moved:'#40C8E8',
+    reqType:'#E05050', autoType:'#40C0C0', optType:'#606068', bpType:'#4A88D0', bomType:'#30C89A', chType:'#D08840', coType:'#9060D0',
+  };
+
+  function mk(tag,a,t){const e=document.createElementNS(NS,tag);for(const[k,v]of Object.entries(a))e.setAttribute(k,v);if(t!==undefined)e.textContent=t;return e;}
+  const els=[];
+  function add(e){els.push(e);return e;}
+  function rect(x,y,w,h,rx,fill,stroke,sw=1.5,extra={}){return mk('rect',{x,y,width:w,height:h,rx,fill,stroke,'stroke-width':sw,...extra});}
+  function line(x1,y1,x2,y2,stroke,sw=1.5,dash='',extra={}){const a={x1,y1,x2,y2,stroke,'stroke-width':sw,...extra};if(dash)a['stroke-dasharray']=dash;return mk('line',a);}
+  function txt(x,y,s,fs,fill,anchor='middle',weight='600',extra={}){return mk('text',{x,y,'font-size':fs,fill,'text-anchor':anchor,'font-weight':weight,'font-family':F,...extra},s);}
+  function tip(cx,y,col){add(mk('polygon',{points:`${cx-5},${y-9} ${cx+5},${y-9} ${cx},${y}`,fill:col||C.conH,class:'connector'}));}
+  function vArr(cx,y1,y2,col){add(line(cx,y1,cx,y2-9,col||C.con,1.8,'',{class:'connector'}));tip(cx,y2,col);}
+  function fork(cx,fy,toCxs,ty,col){
+    const my=fy+(ty-fy)*0.46;
+    add(line(cx,fy,cx,my,col||C.con,1.8,'',{class:'connector'}));
+    const mn=Math.min(...toCxs),mx=Math.max(...toCxs);
+    if(mn!==mx)add(line(mn,my,mx,my,col||C.con,1.8,'',{class:'connector'}));
+    toCxs.forEach(tx=>{add(line(tx,my,tx,ty-9,col||C.con,1.8,'',{class:'connector'}));tip(tx,ty,col);});
+  }
+
+  const W=2000, CX=W/2;
+  const FH=27, SH=32, NH=82, PAD=18, BSZ=8;
+
+  function stSuffix(s){return s==='flag'?'  ⚑':s==='tbd'?'  ◈':s==='new'?'  ✦':s==='rem'?'  ✕':s==='moved'?'  ⤴':'';}
+  function stColor(s,def){return s==='flag'?C.flag:s==='tbd'?C.tbd:s==='new'?C.newf:s==='rem'?C.rem:s==='moved'?C.moved:def;}
+  function typeColor(t){return t==='req'?C.reqType:t==='auto'?C.autoType:t==='opt'?C.optType:t==='bp'?C.bpType:t==='bom'?C.bomType:t==='ch'?C.chType:t==='co'?C.coType:null;}
+
+  function drawNode(x,y,w,cfg){
+    const{label,title,sub,bg,bdr,tc,dc,glow,sections,cols=1,nodeId}=cfg;
+    const allItems=[];
+    sections.forEach(s=>{allItems.push({sec:true,label:s.label});s.fields.forEach(f=>allItems.push({sec:false,f}));});
+    const left =cols===2?allItems.slice(0,Math.ceil(allItems.length/2)):allItems;
+    const right=cols===2?allItems.slice(Math.ceil(allItems.length/2)):[];
+    function colH(items){return items.reduce((h,it)=>h+(it.sec?SH:FH),0);}
+    const bodyH=Math.max(colH(left),colH(right))+PAD*2;
+    const h=NH+bodyH;
+
+    const ng=mk('g',{class:'node-group','data-node':nodeId});
+    if(glow){
+      ng.appendChild(rect(x-6,y-6,w+12,h+12,21,'none',glow,4));
+      ng.appendChild(rect(x-2,y-2,w+4,h+4,18,'none',bdr,0.8,{class:'node-glow'}));
+    }else{
+      ng.appendChild(rect(x-2,y-2,w+4,h+4,18,'none',bdr+'33',1.5,{class:'node-glow'}));
+    }
+    ng.appendChild(rect(x,y,w,h,14,bg,bdr,2));
+    ng.appendChild(rect(x,y,w,NH,14,bg,bdr,2));
+    ng.appendChild(rect(x,y+NH-7,w,7,0,bg,'none'));
+    ng.appendChild(line(x+24,y+NH,x+w-24,y+NH,bdr+'40',1));
+
+    const bW=Math.min(label.length*7.5+28,w-40);
+    ng.appendChild(rect(x+w/2-bW/2,y-15,bW,28,7,C.bg,bdr,1.8));
+    ng.appendChild(txt(x+w/2,y+5,label,10.5,tc,'middle','800'));
+    ng.appendChild(txt(x+w/2,y+38,title,18,'#F0F0F4','middle','800'));
+    if(sub)ng.appendChild(txt(x+w/2,y+62,sub,11.5,dc,'middle','500'));
+    if(cols===2)ng.appendChild(line(x+w/2,y+NH+10,x+w/2,y+h-10,bdr+'22',1));
+
+    function drawItems(items,sx,sy,cw){
+      let fy=sy;
+      items.forEach(it=>{
+        if(it.sec){
+          ng.appendChild(line(sx+8,fy+12,sx+cw-16,fy+12,bdr+'33',1.5));
+          ng.appendChild(txt(sx+8,fy+25,it.label.toUpperCase(),9.5,dc,'start','700',{'letter-spacing':'0.08em'}));
+          fy+=SH;
+        }else{
+          const nm=typeof it.f==='string'?it.f:it.f.name;
+          const st=typeof it.f==='string'?'':(it.f.status||'');
+          const ft=typeof it.f==='string'?'':(it.f.type||'');
+          const fc=stColor(st,tc);
+          const tc2=typeColor(ft);
+          const fr=mk('g',{class:`field-row${st?' status-'+st:''}`,'data-field':nm.toLowerCase(),'data-node':nodeId,'data-status':st});
+          fr.appendChild(rect(sx+2,fy+2,cw-12,FH-4,4,'rgba(255,255,255,0.02)',tc2?tc2+'30':'#FFE06611',1,{class:'fr-bg'}));
+          if(tc2)fr.appendChild(rect(sx+2,fy+2,3,FH-4,2,tc2,'none',0));
+          fr.appendChild(rect(sx+8,fy+9,BSZ,BSZ,2,tc2||bdr,'none',1,{class:'fr-bullet'}));
+          fr.appendChild(txt(sx+22,fy+21,nm+stSuffix(st),12.5,tc2||fc,'start',st?'700':'600',{class:'fr-text'}));
+          ng.appendChild(fr);
+          fy+=FH;
+        }
+      });
+    }
+
+    const sy=y+NH+PAD;
+    drawItems(left, x+14, sy, cols===2?w/2-14:w-14);
+    if(cols===2)drawItems(right,x+w/2+10,sy,w/2-10);
+    add(ng);
+    return y+h;
+  }
+
+  /* ── Field Sections (same data as before) ────────────────────────────── */
+  const bpSec=[
+    {label:'Customer Specific Information',fields:[
+      'Customer Name',
+      'Link to Customer Record',
+      {name:'SSA',status:'new'},
+      'Inactive (flag)',
+    ]},
+    {label:'Quality',fields:[
+      {name:'Allergens (from Item)',status:'moved'},
+      {name:'Organic (from Item)',status:'moved'},
+      {name:'⚑ All quality fields can be added here — review with Jeffrey to determine if they need to live anywhere else',status:'flag'},
+    ]},
+    {label:'Pallet & Stack Specifications',fields:[
+      {name:'Shelf Life Days (from Item)',status:'moved'},
+      {name:'Minimum Shipping Shelf Life Days (from Item)',status:'moved'},
+      {name:'Finished Good Max Stack Height (from Item)',status:'moved'},
+      {name:'WIP Max Stack Height (from RM Item)',status:'moved'},
+      {name:'Packaging Max Warehouse Stack Height (from Packaging Material)',status:'moved'},
+    ]},
+    {label:'Item Specific Information',fields:[
+      {name:'# of Flavors (from Item)',status:'moved'},
+      {name:'Container Size (from Item)',status:'moved'},
+      {name:'Container Type (from Item)',status:'moved'},
+      {name:'Container Spec (from Item)',status:'moved'},
+      {name:'Item Weight (from Item)',status:'moved'},
+      {name:'Item Regex (from Item)',status:'moved'},
+      {name:'Item Regex Message (from Item)',status:'moved'},
+      {name:'Finished System Lot Code Format (from Item)',status:'moved'},
+      {name:'Finished Lot Code Format Description (from Item)',status:'moved'},
+      {name:'WIP System Lot Code Format (from Item)',status:'moved'},
+      {name:'WIP Lot Code Format Description (from Item)',status:'moved'},
+      'Inbound WIP Lot Location',
+      {name:'Lot 1: Placement / Format / Description (from Item)',status:'moved'},
+      {name:'Lot 1: Example / Notes / Image (from Item)',status:'moved'},
+      {name:'Lot 2: Placement / Format / Description (from Item)',status:'moved'},
+      {name:'Lot 2: Example / Notes / Image (from Item)',status:'moved'},
+      'No Printed Lot Required',
+    ]},
+    {label:'Outbound + Shipping Defaults',fields:[
+      'Outbound Load Requirements',
+      'Airbag Qty',
+      'Outbound Load Details',
+      'Outbound Load Pattern',
+      'Pallet Placard Instructions',
+      'Pallet Placard (asset)',
+      {name:'Load Bars (from Item)',status:'moved'},
+      {name:'Load Straps (from Item)',status:'moved'},
+    ]},
+    {label:'Accounting Defaults — same across all items + RM items',fields:[
+      {name:'Income Account (from Item · RM Item)',status:'moved'},
+      {name:'COGS Account / Expense Account (from Item · RM Item)',status:'moved'},
+      {name:'Asset Account (from Item · RM Item)',status:'moved'},
+      {name:'Tax Schedule (from Item · RM Item)',status:'moved'},
+    ]},
+    {label:'Open Decisions',fields:[
+      {name:'Printout — purpose unclear?',status:'flag'},
+    ]},
+  ];
+
+  const varSec=[
+    {label:'⚙ Prerequisites — must be completed first',fields:[
+      'Blueprint',
+    ]},
+
+    /* ─── PRICING SUMMARY ─────────────────────────────────────────────── */
+    {label:'Pricing Summary — Required',fields:[
+      {name:'Custom Form',type:'req'},
+      {name:'Name',type:'req'},
+      {name:'Customer',type:'bp'},
+      {name:'Location',type:'req'},
+      {name:'Price per Case',type:'req',status:'new'},
+    ]},
+    {label:'Pricing Summary — Manual Optional',fields:[
+      {name:'Start Date',type:'opt'},
+      {name:'Exclude Transport',type:'opt'},
+      {name:'Override Headcount',type:'opt'},
+      {name:'Override Price',type:'opt'},
+      {name:'Double Touch',type:'opt'},
+    ]},
+    {label:'Pricing Summary — Auto-Calculated',fields:[
+      {name:'PC ID',type:'auto'},
+      {name:'Created By',type:'auto'},
+      {name:'Date Created',type:'auto'},
+      {name:'Last Modified / By',type:'auto'},
+      {name:'Gross Margin %',type:'auto'},
+      {name:'Gross Margin Target',type:'auto'},
+      {name:'Touch 1 Price / Finished Case',type:'auto'},
+      {name:'Touch 2 Price / Finished Case',type:'auto'},
+      {name:'Total Price',type:'auto'},
+      {name:'Price Target',type:'auto'},
+      {name:'Annual Volume',type:'auto'},
+      {name:'Annual Revenue',type:'auto'},
+      {name:'Region',type:'auto'},
+      {name:'Location Zip',type:'auto'},
+      {name:'State',type:'auto'},
+      {name:'Labor Cost',type:'auto'},
+      {name:'Sync to Salesforce',type:'auto'},
+      {name:'Docusign Status',type:'auto'},
+      {name:'Docusign Contract',type:'auto'},
+      {name:'PDF Export',type:'auto'},
+    ]},
+
+    /* ─── VOLUME ──────────────────────────────────────────────────────── */
+    {label:'Volume — Required',fields:[
+      {name:'Volume per Run',type:'req'},
+      {name:'Initial Volume',type:'req'},
+      {name:'Jan Vol · Feb Vol · Mar Vol · Apr Vol',type:'req'},
+      {name:'May Vol · Jun Vol · Jul Vol · Aug Vol',type:'req'},
+      {name:'Sep Vol · Oct Vol · Nov Vol · Dec Vol',type:'req'},
+    ]},
+    {label:'Volume — Manual Optional',fields:[
+      {name:'Year',type:'opt'},
+      {name:'Frequency',type:'opt'},
+    ]},
+
+    /* ─── PACK DETAILS ────────────────────────────────────────────────── */
+    {label:'Pack Details — Required',fields:[
+      {name:'Finished Pack Format',type:'req'},
+      {name:'Format Type',type:'req'},
+      {name:'Format Type 2',type:'req'},
+      {name:'Touch 1: Flavors',type:'bp'},
+      {name:'Touch 1: Container Size',type:'bp'},
+      {name:'Touch 1: Container Spec',type:'bp'},
+      {name:'Touch 1: Container Type',type:'bp'},
+      {name:'Touch 1: Inbound Case Format',type:'req'},
+      {name:'Touch 1: Inbound Case',type:'req'},
+      {name:'Touch 1: Output Case',type:'req'},
+      {name:'Touch 1: Finished Case',type:'req'},
+      {name:'Touch 2: Finished Pack Format',type:'req'},
+      {name:'Touch 2: Flavors',type:'bp'},
+      {name:'Touch 2: Container Size',type:'bp'},
+      {name:'Touch 2: Container Spec',type:'bp'},
+      {name:'Touch 2: Container Type',type:'bp'},
+      {name:'Touch 2: Inbound Case Format',type:'req'},
+      {name:'Touch 2: Inbound Case',type:'req'},
+      {name:'Touch 2: Output Case',type:'req'},
+      {name:'Touch 2: Finished Case',type:'req'},
+      {name:'Cases per Shift Assumption',type:'req'},
+      {name:'Inbound WIP Cases per Pallet (from RM Item)',type:'req',status:'new'},
+      {name:'Finished Good Cases per Pallet (from Item)',type:'req',status:'new'},
+      {name:'Packaging Cases per Pallet (from Packaging Material)',type:'req',status:'new'},
+    ]},
+    {label:'Pack Details — Manual Optional',fields:[
+      {name:'Packaging Dieline',type:'opt'},
+      {name:'Pallet Pattern',type:'opt'},
+      {name:'Touch 1: Packaging Dieline Secondary',type:'opt'},
+      {name:'Packaging Die Line 2',type:'opt'},
+      {name:'Touch 2: Pallet Pattern',type:'opt'},
+      {name:'Touch 2: Packaging Die Line Secondary',type:'opt'},
+      {name:'Pallet Pattern HI · TI (from SOP)',type:'opt',status:'moved'},
+      {name:'Shrink Film Image (from SOP)',type:'opt',status:'moved'},
+    ]},
+
+    /* ─── PRODUCTION DETAILS ──────────────────────────────────────────── */
+    {label:'Production Details — Manual Optional',fields:[
+      {name:'Touch 1: Slipsheets',type:'opt',status:'flag'},
+      {name:'Touch 1: Labels',type:'opt'},
+      {name:'Touch 1: Tray Former',type:'opt'},
+      {name:'Touch 1: Reuse Tray',type:'opt'},
+      {name:'Touch 1: DeKit',type:'opt'},
+      {name:'Touch 1: Cornerboards',type:'opt',status:'flag'},
+      {name:'Touch 1: Number of Labels',type:'opt'},
+      {name:'Touch 2: Slipsheets',type:'opt'},
+      {name:'Touch 2: Labels',type:'opt'},
+      {name:'Touch 2: Tray Former',type:'opt'},
+      {name:'Touch 2: Reuse Tray',type:'opt'},
+      {name:'Touch 2: DeKit',type:'opt'},
+      {name:'Touch 2: Cornerboards',type:'opt'},
+      {name:'Touch 2: Number of Labels',type:'opt'},
+      {name:'Case Label 1: Qty / Size / Placement (from SOP)',type:'opt',status:'moved'},
+      {name:'Case Label 1: Notes / Image / Download (from SOP)',type:'opt',status:'moved'},
+      {name:'Case Label 2: Qty / Size / Placement (from SOP)',type:'opt',status:'moved'},
+      {name:'Case Label 2: Notes / Image / Download (from SOP)',type:'opt',status:'moved'},
+    ]},
+
+    /* ─── ASSETS ──────────────────────────────────────────────────────── */
+    {label:'Assets — Manual Optional',fields:[
+      {name:'Touch 1: Pricing Machine Model',type:'opt'},
+      {name:'Touch 1: Possible Machine Models',type:'opt'},
+      {name:'Touch 1: Asset Type',type:'opt'},
+      {name:'Touch 1: Mandrel Needed',type:'opt'},
+      {name:'Touch 1: New Mandrel Needed',type:'opt'},
+      {name:'Touch 2: Pricing Machine Model',type:'opt'},
+      {name:'Touch 2: Possible Machine Models',type:'opt'},
+      {name:'Touch 2: Asset Type',type:'opt'},
+      {name:'Touch 2: Mandrel Needed',type:'opt'},
+      {name:'Touch 2: New Mandrel Needed',type:'opt'},
+    ]},
+
+    /* ─── THROUGHPUT ──────────────────────────────────────────────────── */
+    {label:'Throughput — Required',fields:[
+      {name:'Touch 1: Output Case / Min',type:'req'},
+      {name:'Touch 1: Machine Setpoint CPM',type:'req'},
+      {name:'Touch 2: Output Case / Min',type:'req'},
+      {name:'Touch 2: Machine Setpoint CPM',type:'req'},
+      {name:'Goal Cases Per Shift',type:'req'},
+    ]},
+    {label:'Throughput — Manual Optional',fields:[
+      {name:'Touch 1: CS per Shift Breakdown',type:'opt'},
+      {name:'Touch 2: CS per Shift Breakdown',type:'opt'},
+    ]},
+    {label:'Throughput — Auto-Calculated',fields:[
+      {name:'Touch 1: Throughput per Hour',type:'auto'},
+      {name:'Touch 1: Finished Case / Min',type:'auto'},
+      {name:'Touch 1: Uptime',type:'auto'},
+      {name:'Touch 1: Availability',type:'auto'},
+      {name:'Touch 1: Machine Setpoint ID',type:'auto'},
+      {name:'Touch 2: Throughput per Hour',type:'auto'},
+      {name:'Touch 2: Finished Case / Min',type:'auto'},
+      {name:'Touch 2: Output Case / Min',type:'auto'},
+      {name:'Touch 2: Uptime',type:'auto'},
+      {name:'Touch 2: Availability',type:'auto'},
+      {name:'Touch 2: Machine Setpoint ID',type:'auto'},
+    ]},
+
+    /* ─── HEADCOUNT ASSUMPTIONS ───────────────────────────────────────── */
+    {label:'Headcount Assumptions — Auto-Calculated',fields:[
+      {name:'Touch 1: Total Headcount',type:'auto'},
+      {name:'Touch 1: Line Lead Headcount',type:'auto'},
+      {name:'Touch 1: DeKitters Headcount',type:'auto'},
+      {name:'Touch 1: Loaders Headcount',type:'auto'},
+      {name:'Touch 1: Tray Former Headcount',type:'auto'},
+      {name:'Touch 1: Tray Loader Headcount',type:'auto'},
+      {name:'Touch 1: Labelling Support Headcount',type:'auto'},
+      {name:'Touch 1: Palletizers Headcount',type:'auto'},
+      {name:'Touch 1: Recycle & Trash Support Headcount',type:'auto'},
+      {name:'Touch 1: Forklift Support Headcount',type:'auto'},
+      {name:'Touch 1: Overtime Factor (20%)',type:'auto'},
+      {name:'Touch 2: Total Headcount',type:'auto'},
+      {name:'Touch 2: Line Lead Headcount',type:'auto'},
+      {name:'Touch 2: DeKitters Headcount',type:'auto'},
+      {name:'Touch 2: Loaders Headcount',type:'auto'},
+      {name:'Touch 2: Tray Former Headcount',type:'auto'},
+      {name:'Touch 2: Tray Loader Headcount',type:'auto'},
+      {name:'Touch 2: Labelling Support Headcount',type:'auto'},
+      {name:'Touch 2: Palletizers Headcount',type:'auto'},
+      {name:'Touch 2: Recycle & Trash Support Headcount',type:'auto'},
+      {name:'Touch 2: Forklift Support Headcount',type:'auto'},
+      {name:'Touch 2: Overtime Factor (20%)',type:'auto'},
+    ]},
+
+    /* ─── NOTES & APPROVAL ────────────────────────────────────────────── */
+    {label:'Notes & Approval — Required',fields:[
+      {name:'Commercial Notes',type:'req'},
+    ]},
+    {label:'Notes & Approval — Manual Optional',fields:[
+      {name:'Operations Approval',type:'opt'},
+      {name:'Engineering Approval',type:'opt'},
+      {name:'CapEx Opportunity',type:'opt'},
+      {name:'CapEx Notes',type:'opt'},
+      {name:'Line Layout',type:'opt'},
+      {name:'Engineering Info Needed',type:'opt'},
+      {name:'Engineering Automation Notes',type:'opt'},
+      {name:'Ops Information Needed',type:'opt'},
+      {name:'Operations Headcount Notes',type:'opt'},
+    ]},
+    {label:'Notes & Approval — Auto-Calculated',fields:[
+      {name:'Approval Status',type:'auto'},
+    ]},
+
+    /* ─── SOW ─────────────────────────────────────────────────────────── */
+    {label:'SOW — Manual Optional',fields:[
+      {name:'SOJO Services',type:'opt'},
+      {name:'SOJO Materials',type:'opt'},
+      {name:'Customer Materials',type:'opt'},
+      {name:'Sales Rep Email',type:'opt'},
+      {name:'Sales Rep Phone',type:'opt'},
+      {name:'Sales Rep Title',type:'opt'},
+      {name:'Signee',type:'opt'},
+      {name:'Signee Title',type:'opt'},
+      {name:"Customer's Legal Name",type:'opt'},
+      {name:'Quote Date',type:'opt'},
+    ]},
+
+    /* ─── PRINTING FIELDS ─────────────────────────────────────────────── */
+    {label:'Printing Fields — Manual Optional',fields:[
+      {name:'Touch 1: Lanes',type:'opt'},
+      {name:'Touch 2: Lanes',type:'opt'},
+      {name:'Touch 1: Outbound CS x Pallet',type:'opt'},
+      {name:'Touch 2: Outbound CS x Pallet',type:'opt'},
+    ]},
+    {label:'Printing Fields — Auto-Calculated',fields:[
+      {name:'Touch 1: Flight',type:'auto'},
+    ]},
+
+    /* ─── HEADCOUNT LOGIC TAB ─────────────────────────────────────────── */
+    {label:'Headcount Logic Tab — Auto-Calculated',fields:[
+      {name:'Headcount Breakdown',type:'auto'},
+      {name:'Calculations',type:'auto'},
+    ]},
+  ];
+
+  const itmSec=[
+    {label:'⚙ Prerequisites — must be completed first',fields:[
+      {name:'Blueprint (link)',status:'new'},
+      {name:'Variation / PC (link)',status:'new'},
+    ]},
+
+    /* ─── PRIMARY INFORMATION ────────────────────────────────────────── */
+    {label:'Primary Information — Required',fields:[
+      {name:'Display Name / Code',type:'req'},
+      {name:'Customer',type:'bp'},
+      {name:'Custom Form (from Blueprint)',type:'bp'},
+      {name:'Customer Item #',type:'req'},
+    ]},
+    {label:'Primary Information — Manual Optional',fields:[
+      {name:'Inactive',type:'opt'},
+      {name:'Description',type:'opt'},
+      {name:'UPC Code',type:'opt'},
+      {name:'SCC Code',type:'opt'},
+      {name:'UPC12',type:'opt'},
+      {name:'Sub-Assembly',type:'opt'},
+      {name:'Final Touch Item',type:'opt'},
+      {name:'Target per Shift',type:'opt'},
+      {name:'Retailer Item #',type:'opt'},
+      {name:'Minimum Shipping Shelf Life Days (from Blueprint)',type:'bp'},
+      {name:'Allergens (from Blueprint)',type:'bp'},
+      {name:'Organic (from Blueprint)',type:'bp'},
+    ]},
+    {label:'Primary Information — Auto-Calculated',fields:[
+      {name:'Internal ID (auto-generated)',type:'auto'},
+      {name:'Item Name / Number (auto-generated)',type:'auto'},
+    ]},
+
+    /* ─── CONFIGURATION REQUIREMENTS — REMOVED (live in Blueprint) ───── */
+    {label:'⚠ Configuration Requirements — Removed (fields live in Blueprint)',fields:[
+      {name:'Printed Lot Format → Blueprint',status:'rem'},
+      {name:'Printed Lot Description → Blueprint',status:'rem'},
+      {name:'Finished System Lot Format → Blueprint',status:'rem'},
+      {name:'Finished System Lot Description → Blueprint',status:'rem'},
+      {name:'Item Regex → Blueprint',status:'rem'},
+      {name:'Item Regex Message → Blueprint',status:'rem'},
+      {name:'Item Image → Blueprint',status:'rem'},
+      {name:'Stickering → Blueprint',status:'rem'},
+    ]},
+
+    /* ─── SOJO DETAILS ─────────────────────────────────────────────────── */
+    {label:'SOJO Details — Required',fields:[
+      {name:'Cases Per Pallet (from Variation)',type:'req'},
+      {name:'Finished Good Max Stack Height (from Blueprint)',type:'bp'},
+    ]},
+    {label:'SOJO Details — Manual Optional',fields:[
+      {name:'SOP Link',type:'opt',status:'flag'},
+      {name:'Eaches per Master CS',type:'opt',status:'flag'},
+      {name:'Pallet Type',type:'opt'},
+      {name:'Package Type',type:'opt',status:'flag'},
+      {name:'Number of Forklifts',type:'opt',status:'flag'},
+      {name:'Number of People',type:'opt',status:'flag'},
+      {name:'Corner Boards',type:'opt'},
+      {name:'Slipsheets',type:'opt'},
+      {name:'Pallet Inventory Item',type:'opt',status:'flag'},
+      {name:'Load Bars (from Blueprint)',type:'bp'},
+      {name:'Enforce 6 Digit Lot Code',type:'opt',status:'flag'},
+      {name:'Exclude from Lot Validation',type:'opt',status:'flag'},
+      {name:'Flavors (from Blueprint)',type:'bp'},
+      {name:'Container Size (from Blueprint)',type:'bp'},
+      {name:'Container Spec (from Blueprint)',type:'bp'},
+      {name:'Container Type (from Blueprint)',type:'bp'},
+    ]},
+
+    /* ─── SEGMENTATION ─────────────────────────────────────────────────── */
+    {label:'Segmentation — Required',fields:[
+      {name:'Department',type:'req',status:'flag'},
+      {name:'Location',type:'req',status:'flag'},
+    ]},
+    {label:'Segmentation — Manual Optional',fields:[
+      {name:'Include Children',type:'opt'},
+      {name:'Product Group',type:'opt'},
+      {name:'Preferred Location',type:'opt'},
+    ]},
+    {label:'Segmentation — Auto-Calculated',fields:[
+      {name:'SOJO Industries (Subsidiary)',type:'auto'},
+    ]},
+
+    /* ─── ITEM DETAIL ──────────────────────────────────────────────────── */
+    {label:'Item Detail — Required',fields:[
+      {name:'Units Type (from Variation)',type:'auto'},
+    ]},
+    {label:'Item Detail — Manual Optional',fields:[
+      {name:'WIP Unit Type',type:'opt'},
+      {name:'Size',type:'opt'},
+      {name:'Pricing Calculator Approved',type:'opt'},
+      {name:'Scope of Work Signed',type:'opt'},
+      {name:'Item is Pallet',type:'opt'},
+      {name:'International Date Format',type:'opt'},
+      {name:'Format Type',type:'opt'},
+      {name:'Project Format',type:'opt'},
+    ]},
+    {label:'Item Detail — Auto-Calculated',fields:[
+      {name:'Multiplier / Scale',type:'auto'},
+      {name:'Primary Stock Unit (from Units Type)',type:'auto'},
+      {name:'Primary Purchase Unit (from Units Type)',type:'auto'},
+      {name:'Primary Sale Unit (from Units Type)',type:'auto'},
+      {name:'Primary Consumption Unit (from Units Type)',type:'auto'},
+      {name:'Base Unit (from Units Type)',type:'auto'},
+    ]},
+  ];
+
+  const bomSec=[
+    {label:'⚙ Prerequisites — must be completed first',fields:[
+      'Blueprint',
+      'Variation / PC',
+      'Item (via Restrict to Assemblies)',
+    ]},
+    {label:'BOM — Required',fields:[
+      {name:'Name',type:'req'},
+      {name:'Restrict to Assemblies (links to Item / VP#)',type:'req'},
+      {name:'Revisions',type:'req'},
+      {name:'Assemblies → VP#',type:'req'},
+      {name:'Subsidiary',type:'req'},
+    ]},
+    {label:'BOM — Manual Optional',fields:[
+      {name:'Memo',type:'opt'},
+      {name:'Use Component Yield',type:'opt'},
+      {name:'Available for All Assemblies',type:'opt'},
+      {name:'Restrict to Locations',type:'opt'},
+      {name:'Inactive',type:'opt'},
+      {name:'Include Children — do we need this?',type:'opt',status:'flag'},
+    ]},
+    {label:'BOM — Auto-Calculated',fields:[
+      {name:'Used on Assembly',type:'auto'},
+      {name:'Available for All Locations',type:'auto'},
+      {name:'Date Created',type:'auto'},
+    ]},
+  ];
+  const bomLineSec=[
+    {label:'⚙ Prerequisites — must be completed first',fields:[
+      'Bill of Materials (parent BOM must exist)',
+    ]},
+    {label:'BOM Revision — Required',fields:[
+      {name:'Name (from Bill of Materials)',type:'bom'},
+      {name:'Item',type:'req'},
+      {name:'Quantity',type:'req'},
+    ]},
+    {label:'BOM Revision — Manual Optional',fields:[
+      {name:'Memo',type:'opt'},
+      {name:'Effective Start Date — do we need this?',type:'opt',status:'flag'},
+      {name:'Effective End Date — do we need this?',type:'opt',status:'flag'},
+      {name:'Inactive',type:'opt'},
+    ]},
+    {label:'BOM Revision — Auto-Calculated',fields:[
+      {name:'Bill of Materials (parent link)',type:'auto'},
+      {name:'Customer Item #',type:'auto'},
+      {name:'BOM Quantity',type:'auto'},
+      {name:'Units',type:'auto'},
+      {name:'Item Source',type:'auto'},
+      {name:'Item Display Name',type:'auto'},
+      {name:'Date Created',type:'auto'},
+    ]},
+  ];
+  const rmSec=[
+    {label:'⚙ Prerequisites — must be completed first',fields:[
+      {name:'Blueprint (link)',status:'new'},
+      {name:'Variation / PC (link)',status:'new'},
+    ]},
+
+    /* ─── PRIMARY INFORMATION ──────────────────────────────────────────── */
+    {label:'Primary Information — Required',fields:[
+      {name:'Display Name / Code',type:'req'},
+      {name:'Customer (from Blueprint)',type:'bp'},
+    ]},
+    {label:'Primary Information — Manual Optional',fields:[
+      {name:'Item is Pallet',type:'opt'},
+      {name:'Pallet Type',type:'opt'},
+      {name:'Inactive',type:'opt'},
+      {name:'Sub Item Of',type:'opt'},
+      {name:'Artwork Filed',type:'opt'},
+      {name:'UPC Code',type:'opt'},
+      {name:'Item Image',type:'opt'},
+    ]},
+    {label:'Primary Information — Auto-Calculated',fields:[
+      {name:'Internal ID',type:'auto'},
+      {name:'Item Name / Number',type:'auto'},
+    ]},
+
+    /* ─── SOJO DETAILS ─────────────────────────────────────────────────── */
+    {label:'SOJO Details — Required',fields:[
+      {name:'Vendor Item #',type:'req'},
+      {name:'Max Warehouse Stacking (from Blueprint)',type:'bp'},
+    ]},
+    {label:'SOJO Details — Manual Optional',fields:[
+      {name:'Shield Item Type — do we need this?',type:'opt',status:'flag'},
+      {name:'Pallet Inventory Item — do we need this?',type:'opt',status:'flag'},
+      {name:'Stickering — do we need this?',type:'opt',status:'flag'},
+      {name:'Date Code Requirements — do we need this?',type:'opt',status:'flag'},
+      {name:'Raven Item Name — do we need this?',type:'opt',status:'flag'},
+      {name:'Pallet Pattern Image — do we need this?',type:'opt',status:'flag'},
+      {name:'Pallet Pattern Link — do we need this?',type:'opt',status:'flag'},
+      {name:'Container Size (from Blueprint)',type:'bp'},
+      {name:'Container Spec (from Blueprint)',type:'bp'},
+      {name:'Container Type (from Blueprint)',type:'bp'},
+      {name:'Exclude from Lot Validation — do we need this?',type:'opt',status:'flag'},
+      {name:'Enforce 6 Digit Lot Code — do we need this?',type:'opt',status:'flag'},
+    ]},
+
+    /* ─── SEGMENTATION ─────────────────────────────────────────────────── */
+    {label:'Segmentation — Required',fields:[
+      {name:'Department — do we need this?',type:'req',status:'flag'},
+      {name:'Location — do we need this?',type:'req',status:'flag'},
+    ]},
+    {label:'Segmentation — Manual Optional',fields:[
+      {name:'Product Group — do we need this?',type:'opt',status:'flag'},
+      {name:'Planner — do we need this?',type:'opt',status:'flag'},
+      {name:'Include Children — do we need this?',type:'opt',status:'flag'},
+    ]},
+    {label:'Segmentation — Auto-Calculated',fields:[
+      {name:'Subsidiary (SOJO Industries)',type:'auto'},
+    ]},
+
+    /* ─── ITEM DETAIL ──────────────────────────────────────────────────── */
+    {label:'Item Detail — Required',fields:[
+      {name:'Cases per Pallet (from Variation)',type:'auto'},
+      {name:'Units Type (from Variation)',type:'auto'},
+    ]},
+    {label:'Item Detail — Manual Optional',fields:[
+      {name:'Relationship — do we need this?',type:'opt',status:'flag'},
+      {name:'Retailer Item # — do we need this?',type:'opt',status:'flag'},
+      {name:'Multiplier / Scale — do we need this?',type:'opt',status:'flag'},
+      {name:'Case Count — do we need this?',type:'opt',status:'flag'},
+      {name:'Minimum Shipping Shelf Life — do we need this?',type:'opt',status:'flag'},
+      {name:'Eaches per Master CS — do we need this?',type:'opt',status:'flag'},
+      {name:'Size — do we need this?',type:'opt',status:'flag'},
+      {name:'WIP Unit Type — do we need this?',type:'opt',status:'flag'},
+      {name:'International Date Format — do we need this?',type:'opt',status:'flag'},
+    ]},
+    {label:'Item Detail — Auto-Calculated',fields:[
+      {name:'Primary Stock Unit (from Units Type)',type:'auto'},
+      {name:'Primary Purchase Unit (from Units Type)',type:'auto'},
+      {name:'Primary Sale Unit (from Units Type)',type:'auto'},
+      {name:'Primary Consumption Unit (from Units Type)',type:'auto'},
+      {name:'Base Unit (from Units Type)',type:'auto'},
+    ]},
+  ];
+
+  const pkgSec=[
+    {label:'⚙ Prerequisites — must be completed first',fields:[
+      {name:'Blueprint (link)',status:'new'},
+      {name:'Variation / PC (link)',status:'new'},
+    ]},
+
+    /* ─── PRIMARY INFORMATION ──────────────────────────────────────────── */
+    {label:'Primary Information — Required',fields:[
+      {name:'Display Name / Code',type:'req'},
+      {name:'Customer (from Blueprint)',type:'bp'},
+    ]},
+    {label:'Primary Information — Manual Optional',fields:[
+      {name:'Sub Item Of',type:'opt'},
+      {name:'Inactive',type:'opt'},
+      {name:'Pallet Type',type:'opt'},
+      {name:'Artwork Files',type:'opt'},
+      {name:'Item Image',type:'opt'},
+      {name:'UPC Code',type:'opt'},
+      {name:'Item is Pallet',type:'opt'},
+    ]},
+    {label:'Primary Information — Auto-Calculated',fields:[
+      {name:'Internal ID',type:'auto'},
+      {name:'Item Name / Number',type:'auto'},
+    ]},
+
+    /* ─── SOJO DETAILS ─────────────────────────────────────────────────── */
+    {label:'SOJO Details — Required',fields:[
+      {name:'Vendor Item #',type:'req'},
+      {name:'Max Warehouse Stacking (from Blueprint)',type:'bp'},
+    ]},
+    {label:'SOJO Details — Manual Optional',fields:[
+      {name:'Shield Item Type — do we need this?',type:'opt',status:'flag'},
+      {name:'Pallet Inventory Item — do we need this?',type:'opt',status:'flag'},
+      {name:'Stickering — do we need this?',type:'opt',status:'flag'},
+      {name:'Date Code Requirements — do we need this?',type:'opt',status:'flag'},
+      {name:'Raven Item Name — do we need this?',type:'opt',status:'flag'},
+      {name:'Pallet Pattern Image — do we need this?',type:'opt',status:'flag'},
+      {name:'Pallet Pattern Link — do we need this?',type:'opt',status:'flag'},
+      {name:'Container Size (from Blueprint)',type:'bp'},
+      {name:'Container Spec (from Blueprint)',type:'bp'},
+      {name:'Container Type (from Blueprint)',type:'bp'},
+      {name:'Exclude from Lot Validation — do we need this?',type:'opt',status:'flag'},
+      {name:'Enforce 6 Digit Lot Code — do we need this?',type:'opt',status:'flag'},
+    ]},
+
+    /* ─── SEGMENTATION ─────────────────────────────────────────────────── */
+    {label:'Segmentation — Required',fields:[
+      {name:'Department — do we need this?',type:'req',status:'flag'},
+      {name:'Location — do we need this?',type:'req',status:'flag'},
+    ]},
+    {label:'Segmentation — Manual Optional',fields:[
+      {name:'Product Group — do we need this?',type:'opt',status:'flag'},
+      {name:'Planner — do we need this?',type:'opt',status:'flag'},
+      {name:'Include Children — do we need this?',type:'opt',status:'flag'},
+    ]},
+    {label:'Segmentation — Auto-Calculated',fields:[
+      {name:'Subsidiary (SOJO Industries)',type:'auto'},
+    ]},
+
+    /* ─── ITEM DETAIL ──────────────────────────────────────────────────── */
+    {label:'Item Detail — Required',fields:[
+      {name:'Cases per Pallet (from Variation)',type:'auto'},
+      {name:'Units Type (from Variation)',type:'auto'},
+    ]},
+    {label:'Item Detail — Manual Optional',fields:[
+      {name:'Relationship — do we need this?',type:'opt',status:'flag'},
+      {name:'Retailer Item # — do we need this?',type:'opt',status:'flag'},
+      {name:'Multiplier / Scale — do we need this?',type:'opt',status:'flag'},
+      {name:'Case Count — do we need this?',type:'opt',status:'flag'},
+      {name:'Minimum Shipping Shelf Life — do we need this?',type:'opt',status:'flag'},
+      {name:'Eaches per Master CS — do we need this?',type:'opt',status:'flag'},
+      {name:'Size — do we need this?',type:'opt',status:'flag'},
+      {name:'WIP Unit Type — do we need this?',type:'opt',status:'flag'},
+      {name:'International Date Format — do we need this?',type:'opt',status:'flag'},
+    ]},
+    {label:'Item Detail — Auto-Calculated',fields:[
+      {name:'Primary Stock Unit (from Units Type)',type:'auto'},
+      {name:'Primary Purchase Unit (from Units Type)',type:'auto'},
+      {name:'Primary Sale Unit (from Units Type)',type:'auto'},
+      {name:'Primary Consumption Unit (from Units Type)',type:'auto'},
+      {name:'Base Unit (from Units Type)',type:'auto'},
+    ]},
+  ];
+  const coSec=[
+    {label:'⚙ Prerequisites — must be completed first',fields:[
+      'Blueprint',
+      'Variation / PC',
+      'Item (via Item field below)',
+      'BOM (via Bill of Materials field below)',
+    ]},
+
+    /* ─── PRIMARY INFORMATION ──────────────────────────────────────────── */
+    {label:'Primary Information — Required',fields:[
+      {name:'Owner (from Customer Hub)',type:'ch'},
+      {name:'Purchase Order (from Customer Hub)',type:'ch'},
+      {name:'Customer (from Customer Hub)',type:'ch'},
+      {name:'Quantity (from Customer Hub)',type:'ch'},
+      {name:'Price Level (from Customer Hub)',type:'ch'},
+      {name:'Item (from Customer Hub)',type:'ch'},
+      {name:'WIP Delivery Date (from Customer Hub)',type:'ch'},
+      {name:'Forecast Month',type:'req'},
+      {name:'Goal Cases Per Shift (from Variation)',type:'auto'},
+    ]},
+    {label:'Primary Information — Manual Optional',fields:[
+      {name:'Non Standard Work',type:'opt'},
+      {name:'Start Date',type:'opt'},
+      {name:'End Date',type:'opt'},
+      {name:'WIP Already On Site',type:'opt'},
+    ]},
+    {label:'Primary Information — Auto-Calculated',fields:[
+      {name:'ID',type:'auto'},
+      {name:'Date Created',type:'auto'},
+      {name:'Location Price',type:'auto'},
+      {name:'Status',type:'auto'},
+    ]},
+
+    /* ─── LINE ─────────────────────────────────────────────────────────── */
+    {label:'Line — Manual Optional',fields:[
+      {name:'Bay',type:'opt'},
+    ]},
+    {label:'Line — Auto-Calculated',fields:[
+      {name:'Current Assignment',type:'auto'},
+      {name:'Current Asset Model',type:'auto'},
+    ]},
+
+    /* ─── SCHEDULING ───────────────────────────────────────────────────── */
+    {label:'Scheduling — Required',fields:[
+      {name:'Location (from Customer Hub)',type:'ch'},
+    ]},
+    {label:'Scheduling — Manual Optional',fields:[
+      {name:'Unique Work Order',type:'opt'},
+      {name:'Annex Inventory',type:'opt'},
+    ]},
+    {label:'Scheduling — Auto-Calculated',fields:[
+      {name:'Unique WO Transaction',type:'auto'},
+    ]},
+    {label:'Scheduling — Removed Fields',fields:[
+      {name:'SOP',status:'rem'},
+      {name:'SOP CS / Shift',status:'rem'},
+      {name:'SOP Headcount',status:'rem'},
+    ]},
+
+    /* ─── BOM ──────────────────────────────────────────────────────────── */
+    {label:'BOM — Required',fields:[
+      {name:'Bill of Materials',type:'req'},
+      {name:'Bill of Materials Revision',type:'req'},
+    ]},
+    {label:'BOM — Auto-Calculated',fields:[
+      {name:'Components',type:'auto'},
+    ]},
+
+    /* ─── BUILDABLE ────────────────────────────────────────────────────── */
+    {label:'Buildable — Auto-Calculated',fields:[
+      {name:'WMS Uncommitted Buildable',type:'auto'},
+      {name:'WMS Uncommitted Buildable Annex',type:'auto'},
+      {name:'Uncommitted Buildable',type:'auto'},
+      {name:'Committed Buildable',type:'auto'},
+      {name:'WMS Buildable',type:'auto'},
+      {name:'Last Modified',type:'auto'},
+    ]},
+
+    /* ─── HEADCOUNT ────────────────────────────────────────────────────── */
+    {label:'Headcount — Required',fields:[
+      {name:'Headcount (from Variation)',type:'req'},
+    ]},
+
+    /* ─── PLANNING ─────────────────────────────────────────────────────── */
+    {label:'Planning — Required',fields:[
+      {name:'Plan For Shifts',type:'req'},
+    ]},
+    {label:'Planning — Manual Optional',fields:[
+      {name:'Schedule Saturdays',type:'opt'},
+      {name:'Schedule Sundays',type:'opt'},
+    ]},
+    {label:'Planning — Auto-Calculated',fields:[
+      {name:'Build Quantity',type:'auto'},
+      {name:'Quantity on Work Orders',type:'auto'},
+      {name:'Plan Generation Time / Stamp',type:'auto'},
+      {name:'Scale WO Closure',type:'auto'},
+    ]},
+  ];
+  const woAutoSec=[
+    {label:'⚙ Prerequisites — must be completed first',fields:[
+      'Blueprint',
+      'Variation / PC',
+      'Item',
+      'BOM',
+      'Customer Order',
+    ]},
+
+    /* ─── PRIMARY INFORMATION ──────────────────────────────────────────── */
+    {label:'Primary Information — Required',fields:[
+      {name:'Customer Project (from Customer Order)',type:'co'},
+      {name:'Assembly (from Customer Order)',type:'co'},
+      {name:'Bill of Materials (from Customer Order)',type:'co'},
+      {name:'Bill of Materials Revision (from Customer Order)',type:'co'},
+      {name:'Quantity (from Customer Order)',type:'co'},
+      {name:'Date',type:'req'},
+      {name:'Status (from Customer Order)',type:'co'},
+      {name:'Customer PO (from Customer Order)',type:'co'},
+      {name:'Production Start Date (from Customer Order)',type:'co'},
+      {name:'Production End Date (from Customer Order)',type:'co'},
+      {name:'Goal Cases Per Shift (from Customer Order)',type:'co'},
+    ]},
+    {label:'Primary Information — Manual Optional',fields:[
+      {name:'Work Order Invoiced?',type:'opt'},
+      {name:'Mark Sub Assemblies Phantom',type:'opt'},
+      {name:'Firmed',type:'opt'},
+      {name:'Memo',type:'opt'},
+    ]},
+    {label:'Primary Information — Auto-Calculated',fields:[
+      {name:'Order #',type:'auto'},
+      {name:'Created Date',type:'auto'},
+    ]},
+
+    /* ─── PRODUCTION LINE ──────────────────────────────────────────────── */
+    {label:'Production Line — Required',fields:[
+      {name:'Bay (from Customer Order)',type:'co'},
+    ]},
+
+    /* ─── COMMERCIAL VALIDATION — REMOVED ─────────────────────────────── */
+    {label:'Commercial Validation — Removed Fields',fields:[
+      {name:'SOP',status:'rem'},
+      {name:'Customer SSA Signed',status:'rem'},
+    ]},
+
+    /* ─── CLASSIFICATION ───────────────────────────────────────────────── */
+    {label:'Classification — Required',fields:[
+      {name:'Subsidiary (from Customer Order)',type:'co'},
+      {name:'Department (from Customer Order)',type:'co'},
+      {name:'Location (from Customer Order)',type:'co'},
+      {name:'Price Level (from Customer Order)',type:'co'},
+    ]},
+
+    /* ─── STANDARD COST ────────────────────────────────────────────────── */
+    {label:'Standard Cost — Required',fields:[
+      {name:'Customer Order',type:'req'},
+      {name:'Headcount (from Customer Order)',type:'req'},
+    ]},
+    {label:'Standard Cost — Manual Optional',fields:[
+      {name:'Allow to Build Partial Pallets',type:'opt'},
+      {name:'WO PO#',type:'opt'},
+      {name:'WMS Download Result',type:'opt'},
+      {name:'WMS Upload Result',type:'opt'},
+    ]},
+    {label:'Standard Cost — Auto-Calculated',fields:[
+      {name:'Standard Cost',type:'auto'},
+      {name:'Revenue Built',type:'auto'},
+      {name:'Temp Labor Cost — STD',type:'auto'},
+      {name:'Consumables — STD',type:'auto'},
+      {name:'Fixed Labor Cost — STD',type:'auto'},
+      {name:'Warehouse Fixed — STD',type:'auto'},
+      {name:'Warehouse Variable — STD',type:'auto'},
+      {name:'Other MFG — STD',type:'auto'},
+      {name:'Main Line Item',type:'auto'},
+      {name:'Standard Gross Margin',type:'auto'},
+      {name:'Project Format Type',type:'auto'},
+      {name:'Line Format',type:'auto'},
+    ]},
+  ];
+  const woManualSec=[];
+  const acSec=[{label:'Derived at SOP Generation — No Manual Entry',fields:[
+    {name:'SOP Name (naming convention TBD)',status:'flag'},
+    {name:'Status (derived from WO)',status:'flag'},
+    {name:'Published (auto-trigger?)',status:'flag'},
+    'Pricing Calculator ID (from Variation)','Second Touch (from Variation)',
+    'Total # People (sum of headcount)',
+    {name:'Pallet Configuration (formula TBD)',status:'flag'},
+    'Date Created / Last Modified','Operations Printout (generated on SOP creation)',
+    {name:'Project Format (auto-calc?)',status:'flag'},
+  ]}];
+
+  /* ── Draw diagram ────────────────────────────────────────────────────── */
+  const BP_W=1140, BP_X=CX-BP_W/2, BP_Y=60;
+  const bpBot=drawNode(BP_X,BP_Y,BP_W,{nodeId:'blueprint',label:'BLUEPRINT · PRODUCT RECORD',title:'Blueprint',sub:'Defined once per product relationship — immutable day-to-day',bg:C.bpBg,bdr:C.bpBdr,tc:C.bpTxt,dc:C.bpDim,glow:C.bpGlow,cols:2,sections:bpSec});
+
+  /* ── Field type legend ────────────────────────────────────────────────── */
+  const LEG_X=BP_X+BP_W+28, LEG_Y=BP_Y+20;
+  add(rect(LEG_X,LEG_Y,240,202,10,'#0A0A0E','#303038',1.5));
+  add(txt(LEG_X+120,LEG_Y+18,'FIELD TYPE KEY',9,C.acTxt,'middle','800'));
+  add(line(LEG_X+12,LEG_Y+26,LEG_X+228,LEG_Y+26,'#303038',1));
+  [[C.reqType,'Required — must be filled'],[C.autoType,'Auto-Calculated'],[C.optType,'Manual Optional'],[C.bpType,'Auto-populates from Blueprint'],[C.bomType,'Auto-populates from BOM'],[C.chType,'Auto-populates from Customer Hub'],[C.coType,'Auto-populates from Customer Order']].forEach(([col,lbl],i)=>{
+    const ly=LEG_Y+38+i*24;
+    add(rect(LEG_X+12,ly,3,16,1,col,'none',0));
+    add(rect(LEG_X+20,ly,9,9,2,col,'none',0));
+    add(txt(LEG_X+36,ly+10.5,lbl,11.5,col,'start','600'));
+  });
+
+  const TILE_Y=bpBot+88;
+  const VAR_X=24, VAR_W=820, ITM_X=875, ITM_W=400, BOM_X=1305, BOM_W=480;
+  const varCX=VAR_X+VAR_W/2, itmCX=ITM_X+ITM_W/2, bomCX=BOM_X+BOM_W/2;
+
+  fork(CX,bpBot,[varCX,itmCX,bomCX],TILE_Y,'#2A4870');
+
+  const varBot=drawNode(VAR_X,TILE_Y,VAR_W,{nodeId:'variation',label:'VARIATION / PC · PRODUCTION CONFIG',title:'Variation / Pricing Config',sub:'11 sections · Color-coded by type: Red = Required · Teal = Auto-Calculated · Gray = Manual Optional · Ops + Engineering approval gates Item creation',bg:C.varBg,bdr:C.varBdr,tc:C.varTxt,dc:C.varDim,cols:2,sections:varSec});
+  const itmBot=drawNode(ITM_X,TILE_Y,ITM_W,{nodeId:'item',label:'ITEM · NETSUITE RECORD',title:'Item',sub:'4 sections: Primary Information · SOJO Details · Segmentation · Item Detail · Color-coded by field type',bg:C.itmBg,bdr:C.itmBdr,tc:C.itmTxt,dc:C.itmDim,cols:1,sections:itmSec});
+  const bomBot=drawNode(BOM_X,TILE_Y,BOM_W,{nodeId:'bom',label:'BILL OF MATERIALS',title:'Bill of Materials',sub:'Parent record · Links to Item via Restrict to Assemblies · Color-coded by field type',bg:C.bomBg,bdr:C.bomBdr,tc:C.bomTxt,dc:C.bomDim,cols:1,sections:bomSec});
+  vArr(bomCX,bomBot,bomBot+34,C.bomBdr+'66');
+  const bomLineBot=drawNode(BOM_X,bomBot+34,BOM_W,{nodeId:'bomline',label:'BOM REVISION · VERSIONED COMPONENT LIST',title:'BOM Revision',sub:'Requires parent BOM · Name sourced from BOM · Component rows are packaging · consumables · raw materials',bg:C.bomBg,bdr:C.bomBdr+'AA',tc:C.bomTxt+'CC',dc:C.bomDim,cols:1,sections:bomLineSec});
+
+  /* ── RM Item + Packaging Material — below Item ───────────────────────── */
+  const rmBot=drawNode(ITM_X,itmBot+44,ITM_W,{nodeId:'rmitem',label:'RM ITEM · RAW MATERIAL RECORD',title:'RM Item',sub:'4 sections: Primary Information · SOJO Details · Segmentation · Item Detail · Color-coded by field type',bg:C.rmBg,bdr:C.rmBdr,tc:C.rmTxt,dc:C.rmDim,cols:1,sections:rmSec});
+  const pkgBot=drawNode(ITM_X,rmBot+24,ITM_W,{nodeId:'pkgitem',label:'PACKAGING MATERIAL · COMPONENT RECORD',title:'Packaging Material',sub:'4 sections: Primary Information · SOJO Details · Segmentation · Item Detail · Color-coded by field type',bg:C.pkgBg,bdr:C.pkgBdr,tc:C.pkgTxt,dc:C.pkgDim,cols:1,sections:pkgSec});
+
+  /* ── Removed Fields node — below BOM Revision ──────────────────────────── */
+  const remSec=[{label:'Fields to Remove from SOP Record',fields:[
+    {name:'SOP Creator',status:'rem'},
+    {name:'Date Created',status:'rem'},
+    {name:'Last Modified',status:'rem'},
+    {name:'By',status:'rem'},
+    {name:'Customer Printout',status:'rem'},
+    {name:'SOP Docusign Contract',status:'rem'},
+  ]}];
+  const remBg='#0A0A0C',remBdr='#3A3A42',remTxt='#888890',remDim='#5A5A62';
+  const remBot=drawNode(BOM_X,bomLineBot+44,BOM_W,{nodeId:'removed',label:'REMOVED FIELDS · DISCARDED',title:'Removed from SOP',sub:'These fields will no longer exist on the SOP record',bg:remBg,bdr:remBdr,tc:remTxt,dc:remDim,cols:1,sections:remSec});
+
+  const maxTileBot=Math.max(varBot,itmBot,rmBot,pkgBot,remBot);
+  const CA_Y=maxTileBot+76;
+  const CA_W=540,CA_H=46,CA_X=CX-CA_W/2;
+
+  const midY=CA_Y-36;
+  add(line(varCX,varBot,varCX,midY,C.varBdr+'30',1.8,'7 5',{class:'connector'}));
+  add(line(itmCX,itmBot,itmCX,midY,C.itmBdr+'30',1.8,'7 5',{class:'connector'}));
+  add(line(varCX,midY,itmCX,midY,'#1A1A1E',1.8,'7 5',{class:'connector'}));
+  add(line(CX,midY,CX,CA_Y-9,'#26262C',1.8,'',{class:'connector'}));
+  tip(CX,CA_Y,'#2C2C32');
+
+  const caGroup=mk('g',{class:'node-group','data-node':'approval'});
+  caGroup.appendChild(rect(CA_X,CA_Y,CA_W,CA_H,CA_H/2,C.caBg,C.caBdr,2.2,{class:'node-glow'}));
+  caGroup.appendChild(txt(CX,CA_Y+CA_H/2+5.5,'CUSTOMER APPROVAL — SOW SIGN-OFF GATE',11,C.caTxt,'middle','800'));
+  add(caGroup);
+
+  const CO_Y=CA_Y+CA_H+62;
+  const CO_W=820,CO_X=CX-CO_W/2;
+  vArr(CX,CA_Y+CA_H,CO_Y,C.coBdr+'90');
+  const coBot=drawNode(CO_X,CO_Y,CO_W,{nodeId:'customerorder',label:'CUSTOMER ORDER',title:'Customer Order',sub:'5 sections: Primary Information · Line · Scheduling · BOM · Planning · Orange = from Customer Hub',bg:C.coBg,bdr:C.coBdr,tc:C.coTxt,dc:C.coDim,cols:2,sections:coSec});
+
+  const WO_Y=coBot+76;
+  const WO_W=1140,WO_X=CX-WO_W/2;
+  vArr(CX,coBot,WO_Y,C.woBdr+'80');
+  const woBot=drawNode(WO_X,WO_Y,WO_W,{nodeId:'workorder',label:'WORK ORDER · RUN ACTUALS',title:'Work Order',sub:'5 sections: Primary Information · Production Line · Classification · Standard Cost · Purple = from Customer Order',bg:C.woBg,bdr:C.woBdr,tc:C.woTxt,dc:C.woDim,cols:2,sections:[...woAutoSec,...woManualSec]});
+
+  const AC_Y=woBot+62;
+  const AC_W=860,AC_X=CX-AC_W/2;
+  vArr(CX,woBot,AC_Y,C.acBdr+'90');
+  const acBot=drawNode(AC_X,AC_Y,AC_W,{nodeId:'autocalc',label:'AUTO-CALCULATED · SOP GENERATION',title:'Auto-Calc',sub:'Derived from other records at SOP generation — zero manual entry',bg:C.acBg,bdr:C.acBdr,tc:C.acTxt,dc:C.acDim,cols:1,sections:acSec});
+
+  const SOP_Y=acBot+76;
+  const SOP_W=1140,SOP_X=CX-SOP_W/2;
+  const SOP_HDR=84;
+  vArr(CX,acBot,SOP_Y,C.sopBdr+'80');
+
+  const sopSources=[
+    {label:'Primary Info + Summary',pills:[{t:'Blueprint',c:C.bpBdr},{t:'Variation/PC',c:C.varBdr},{t:'Auto-Calc',c:'#5A5A65'}]},
+    {label:'Headcount',pills:[{t:'Variation (Assumed)',c:C.varBdr},{t:'Work Order (Actual)',c:C.woBdr}]},
+    {label:'Production Fields',pills:[{t:'Variation (Assumption)',c:C.varBdr},{t:'Work Order (Actual)',c:C.woBdr},{t:'Item',c:C.itmBdr},{t:'Customer Order',c:C.coBdr}]},
+    {label:'Lot Codes + Printed Lot',pills:[{t:'Blueprint',c:C.bpBdr}]},
+    {label:'Case Labels',pills:[{t:'Variation/PC (from intake form)',c:C.varBdr}]},
+    {label:'Outbound Defaults',pills:[{t:'Blueprint',c:C.bpBdr}]},
+    {label:'BOM Sublist (component lines)',pills:[{t:'BOM → BOM Revision → RM Item',c:C.bomBdr}]},
+    {label:'Run Notes + Files',pills:[{t:'Work Order',c:C.woBdr}]},
+    {label:'Fields to Remove',pills:[{t:'SOP Creator · Date Created · Last Modified · By · Customer Printout · SOP Docusign',c:'#5A5A65'}]},
+  ];
+
+  const sopRowH=44;
+  const sopHalf=Math.ceil(sopSources.length/2);
+  const sopBodyH=sopHalf*sopRowH+PAD*2;
+  const SOP_H=SOP_HDR+sopBodyH;
+
+  const sopGroup=mk('g',{class:'node-group','data-node':'sop'});
+  sopGroup.appendChild(rect(SOP_X-6,SOP_Y-6,SOP_W+12,SOP_H+12,21,'none',C.sopBdr+'40',4));
+  sopGroup.appendChild(rect(SOP_X-2,SOP_Y-2,SOP_W+4,SOP_H+4,18,'none',C.sopBdr,0.8,{class:'node-glow'}));
+  sopGroup.appendChild(rect(SOP_X,SOP_Y,SOP_W,SOP_H,14,C.sopBg,C.sopBdr,2));
+  sopGroup.appendChild(rect(SOP_X,SOP_Y,SOP_W,SOP_HDR,14,C.sopBg,C.sopBdr,2));
+  sopGroup.appendChild(rect(SOP_X,SOP_Y+SOP_HDR-7,SOP_W,7,0,C.sopBg,'none'));
+  sopGroup.appendChild(line(SOP_X+24,SOP_Y+SOP_HDR,SOP_X+SOP_W-24,SOP_Y+SOP_HDR,C.sopBdr+'40',1));
+
+  const sBadgeW=320;
+  sopGroup.appendChild(rect(CX-sBadgeW/2,SOP_Y-15,sBadgeW,28,7,C.bg,C.sopBdr,1.8));
+  sopGroup.appendChild(txt(CX,SOP_Y+5,'SOP · AUTO-GENERATED OUTPUT RECORD',10.5,C.sopTxt,'middle','800'));
+  sopGroup.appendChild(txt(CX,SOP_Y+38,'SOP — Standard Operating Procedure',19,'#F0E0FF','middle','800'));
+  sopGroup.appendChild(txt(CX,SOP_Y+62,'Auto-assembled from all upstream records · Target: ~12 fields confirmed manually · Zero re-entry',12,C.sopDim,'middle','500'));
+  sopGroup.appendChild(line(SOP_X+SOP_W/2,SOP_Y+SOP_HDR+10,SOP_X+SOP_W/2,SOP_Y+SOP_H-10,C.sopBdr+'22',1));
+
+  function drawSopRow(row,x,y){
+    sopGroup.appendChild(txt(x+14,y+18,row.label,11.5,'#A8A8B8','start','600'));
+    let px=x+14;
+    row.pills.forEach(p=>{
+      const pw=p.t.length*5.8+18;
+      sopGroup.appendChild(rect(px,y+24,pw,16,3,p.c+'1A',p.c,1));
+      sopGroup.appendChild(txt(px+pw/2,y+35,p.t,8.5,p.c,'middle','700'));
+      px+=pw+6;
+    });
+  }
+  const sopLeft=sopSources.slice(0,sopHalf);
+  const sopRight=sopSources.slice(sopHalf);
+  let sly=SOP_Y+SOP_HDR+PAD;
+  sopLeft.forEach(r=>{drawSopRow(r,SOP_X,sly);sly+=sopRowH;});
+  let sry=SOP_Y+SOP_HDR+PAD;
+  sopRight.forEach(r=>{drawSopRow(r,SOP_X+SOP_W/2,sry);sry+=sopRowH;});
+  add(sopGroup);
+  const sopBot=SOP_Y+SOP_H;
+
+  const TOTAL_H=sopBot+60;
+  svg.setAttribute('width',W);
+  svg.setAttribute('height',TOTAL_H);
+  svg.setAttribute('viewBox',`0 0 ${W} ${TOTAL_H}`);
+  const bgEl=rect(0,0,W,TOTAL_H,0,C.bg,'none');
+  svg.appendChild(bgEl);
+  els.forEach(e=>svg.appendChild(e));
+})();
+
+/* ════════════════════════════════════════════════════════════════════════════
+   BUILD UI + INITIALIZE
+═══════════════════════════════════════════════════════════════════════════ */
+buildSopLookup();
+
+const svg = document.getElementById('d');
+const allFieldRows = svg.querySelectorAll('.field-row');
+const allSopFields = document.querySelectorAll('.sop-field');
+
+/* Stats */
+const totalFields = SOP_FIELDS.length;
+const flagCount = SOP_FIELDS.filter(f => f.status === 'flag').length;
+const tbdCount  = SOP_FIELDS.filter(f => f.status === 'tbd').length;
+const newCount  = SOP_FIELDS.filter(f => f.status === 'new').length;
+const remCount  = SOP_FIELDS.filter(f => f.status === 'rem').length;
+const movedCount = document.querySelectorAll('.field-row.status-moved').length;
+
+document.getElementById('stats').innerHTML = `
+  <span class="stat-pill">Total <b>${totalFields}</b></span>
+  <span class="stat-pill is-flag">⚑ <b>${flagCount}</b> Flagged</span>
+  <span class="stat-pill is-tbd">◈ <b>${tbdCount}</b> TBD</span>
+  <span class="stat-pill is-new">✦ <b>${newCount}</b> New</span>
+  <span class="stat-pill is-rem">✕ <b>${remCount}</b> Remove</span>
+  <span class="stat-pill is-moved">⤴ <b>${movedCount}</b> Moved</span>
+`;
+
+/* ════════════════════════════════════════════════════════════════════════════
+   SEARCH (works across both views)
+═══════════════════════════════════════════════════════════════════════════ */
+const searchInput = document.getElementById('search');
+const clearBtn = document.getElementById('clear');
+const matchDisplay = document.getElementById('matchDisplay');
+
+function performSearch(query) {
+  query = query.toLowerCase().trim();
+
+  if (!query) {
+    document.body.classList.remove('searching');
+    allFieldRows.forEach(r => r.classList.remove('match'));
+    allSopFields.forEach(s => s.classList.remove('match'));
+    svg.querySelectorAll('.node-group').forEach(g => g.classList.remove('has-match'));
+    matchDisplay.textContent = 'Type to search · ⌘K';
+    matchDisplay.classList.remove('has-matches');
+    clearBtn.classList.remove('visible');
+    return;
+  }
+
+  document.body.classList.add('searching');
+  clearBtn.classList.add('visible');
+
+  let svgCount = 0, sopCount = 0;
+  let firstMatch = null;
+  const matchedNodes = new Set();
+
+  allFieldRows.forEach(r => {
+    const matches = (r.dataset.field || '').includes(query);
+    r.classList.toggle('match', matches);
+    if (matches) {
+      svgCount++;
+      matchedNodes.add(r.dataset.node);
+      if (!firstMatch) firstMatch = r;
+    }
+  });
+
+  allSopFields.forEach(s => {
+    const matches = (s.dataset.field || '').includes(query);
+    s.classList.toggle('match', matches);
+    if (matches) sopCount++;
+  });
+
+  svg.querySelectorAll('.node-group').forEach(g => {
+    g.classList.toggle('has-match', matchedNodes.has(g.dataset.node));
+  });
+
+  const totalMatch = Math.max(svgCount, sopCount);
+  if (totalMatch > 0) {
+    matchDisplay.textContent = `${totalMatch} match${totalMatch === 1 ? '' : 'es'} found`;
+    matchDisplay.classList.add('has-matches');
+
+    if (firstMatch && document.getElementById('view-map').classList.contains('active')) {
+      const bbox = firstMatch.getBoundingClientRect();
+      if (bbox.top < 200 || bbox.top > window.innerHeight - 100) {
+        window.scrollTo({ top: window.scrollY + bbox.top - 200, behavior: 'smooth' });
+      }
+    }
+  } else {
+    matchDisplay.textContent = 'No matches found';
+    matchDisplay.classList.remove('has-matches');
+  }
+}
+
+let searchTimeout;
+searchInput.addEventListener('input', e => {
+  clearTimeout(searchTimeout);
+  searchTimeout = setTimeout(() => performSearch(e.target.value), 80);
+});
+clearBtn.addEventListener('click', () => {
+  searchInput.value = '';
+  performSearch('');
+  searchInput.focus();
+});
+
+document.addEventListener('keydown', e => {
+  if ((e.key === '/' || (e.key === 'k' && (e.metaKey || e.ctrlKey))) && document.activeElement !== searchInput) {
+    e.preventDefault();
+    searchInput.focus();
+    searchInput.select();
+  } else if (e.key === 'Escape') {
+    if (searchInput.value) {
+      searchInput.value = '';
+      performSearch('');
+    }
+    closeDetailPanel();
+    searchInput.blur();
+  }
+});
+
+/* ════════════════════════════════════════════════════════════════════════════
+   FILTER CHIPS
+═══════════════════════════════════════════════════════════════════════════ */
+document.querySelectorAll('.chip').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.chip').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    const filter = btn.dataset.filter;
+    document.body.classList.remove('filter-flag','filter-tbd','filter-new','filter-rem');
+    if (filter !== 'all') document.body.classList.add('filter-' + filter);
+  });
+});
+
+/* ════════════════════════════════════════════════════════════════════════════
+   CLICK-TO-FOCUS NODE (Source Map)
+═══════════════════════════════════════════════════════════════════════════ */
+let focusedNode = null;
+svg.querySelectorAll('.node-group').forEach(g => {
+  g.style.cursor = 'pointer';
+  g.addEventListener('click', e => {
+    if (e.target.closest('.field-row')) return;
+    const nodeId = g.dataset.node;
+    if (focusedNode === nodeId) {
+      focusedNode = null;
+      document.body.classList.remove('searching');
+      allFieldRows.forEach(r => r.classList.remove('match'));
+      svg.querySelectorAll('.node-group').forEach(n => n.classList.remove('has-match'));
+    } else {
+      focusedNode = nodeId;
+      document.body.classList.add('searching');
+      allFieldRows.forEach(r => r.classList.toggle('match', r.dataset.node === nodeId));
+      svg.querySelectorAll('.node-group').forEach(n => n.classList.toggle('has-match', n.dataset.node === nodeId));
+    }
+  });
+});
+</script>
+</body>
+</html>

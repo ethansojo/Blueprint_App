@@ -1,0 +1,547 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Blueprint Decision Tree — Sojo Industries</title>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #050507;
+    --surface: #0C0C10;
+    --border: #1E1E26;
+    --text: #E8E8F0;
+    --muted: #6A6A80;
+    --blue: #4A88D0;
+    --blue-dim: #1A3A60;
+    --amber: #D08840;
+    --amber-dim: #3A2008;
+    --teal: #30C89A;
+    --teal-dim: #063A28;
+    --purple: #9060D0;
+    --purple-dim: #28105A;
+    --gray: #505060;
+    --gray-dim: #18181E;
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Manrope', sans-serif;
+    font-size: 14px;
+    line-height: 1.6;
+    min-height: 100vh;
+    padding: 48px 24px;
+  }
+
+  .page-header {
+    text-align: center;
+    margin-bottom: 56px;
+  }
+
+  .eyebrow {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 12px;
+  }
+
+  h1 {
+    font-size: 32px;
+    font-weight: 800;
+    color: var(--text);
+    margin-bottom: 8px;
+    letter-spacing: -0.02em;
+  }
+
+  .subtitle {
+    color: var(--muted);
+    font-size: 15px;
+    font-weight: 400;
+  }
+
+  .tree-wrap {
+    max-width: 900px;
+    margin: 0 auto;
+  }
+
+  /* ── FLOW NODES ─────────────────────────────────────────────────────── */
+  .flow {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0;
+  }
+
+  .node {
+    position: relative;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px 22px;
+    text-align: center;
+    background: var(--surface);
+    width: 100%;
+    max-width: 480px;
+  }
+
+  .node.start {
+    border-radius: 32px;
+    background: var(--gray-dim);
+    border-color: var(--gray);
+    font-weight: 700;
+    font-size: 13px;
+    color: #A0A0B0;
+    max-width: 280px;
+    padding: 12px 28px;
+  }
+
+  .node.question {
+    background: var(--surface);
+  }
+
+  .node .node-label {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    margin-bottom: 4px;
+  }
+
+  .node .node-title {
+    font-size: 15px;
+    font-weight: 700;
+    margin-bottom: 4px;
+  }
+
+  .node .node-examples {
+    font-size: 12px;
+    color: var(--muted);
+    font-weight: 400;
+  }
+
+  /* color variants */
+  .node.blue  { border-color: var(--blue);   background: var(--blue-dim); }
+  .node.amber { border-color: var(--amber);  background: var(--amber-dim); }
+  .node.teal  { border-color: var(--teal);   background: var(--teal-dim); }
+  .node.purple{ border-color: var(--purple); background: var(--purple-dim); }
+
+  .node.blue   .node-label { color: var(--blue); }
+  .node.amber  .node-label { color: var(--amber); }
+  .node.teal   .node-label { color: var(--teal); }
+  .node.purple .node-label { color: var(--purple); }
+
+  /* ── BRANCH LAYOUT ──────────────────────────────────────────────────── */
+  .arrow-down {
+    width: 1px;
+    height: 36px;
+    background: var(--border);
+    margin: 0 auto;
+    position: relative;
+  }
+
+  .arrow-down::after {
+    content: '';
+    position: absolute;
+    bottom: -5px;
+    left: -4px;
+    border-left: 5px solid transparent;
+    border-right: 5px solid transparent;
+    border-top: 6px solid var(--border);
+  }
+
+  .branch-row {
+    display: grid;
+    grid-template-columns: 1fr 40px 1fr;
+    align-items: start;
+    gap: 0;
+    width: 100%;
+    max-width: 800px;
+    margin: 0 auto;
+  }
+
+  .branch-yes, .branch-no {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .branch-label {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    margin-bottom: 6px;
+    padding: 3px 10px;
+    border-radius: 20px;
+  }
+
+  .branch-label.yes { color: var(--teal); background: rgba(48,200,154,0.1); }
+  .branch-label.no  { color: var(--muted); background: rgba(80,80,96,0.15); }
+
+  .branch-center {
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    padding-top: 0;
+  }
+
+  .branch-line-h {
+    height: 1px;
+    background: var(--border);
+    width: 100%;
+    margin-top: 24px;
+  }
+
+  .branch-connector {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0;
+    width: 100%;
+  }
+
+  .branch-vert {
+    width: 1px;
+    background: var(--border);
+    height: 32px;
+    margin: 0 auto;
+  }
+
+  .outcome-node {
+    border: 1px solid;
+    border-radius: 10px;
+    padding: 14px 16px;
+    text-align: center;
+    width: 100%;
+    max-width: 320px;
+  }
+
+  .outcome-node .outcome-action {
+    font-size: 13px;
+    font-weight: 800;
+    margin-bottom: 2px;
+  }
+
+  .outcome-node .outcome-sub {
+    font-size: 11px;
+    font-weight: 400;
+    opacity: 0.65;
+  }
+
+  .outcome-node.blue   { border-color: var(--blue);   background: var(--blue-dim);   }
+  .outcome-node.amber  { border-color: var(--amber);  background: var(--amber-dim);  }
+  .outcome-node.teal   { border-color: var(--teal);   background: var(--teal-dim);   }
+  .outcome-node.purple { border-color: var(--purple); background: var(--purple-dim); }
+  .outcome-node.gray   { border-color: var(--gray);   background: var(--gray-dim);   }
+
+  .outcome-node.blue   .outcome-action { color: var(--blue); }
+  .outcome-node.amber  .outcome-action { color: var(--amber); }
+  .outcome-node.teal   .outcome-action { color: var(--teal); }
+  .outcome-node.purple .outcome-action { color: var(--purple); }
+  .outcome-node.gray   .outcome-action { color: #A0A0B0; }
+
+  /* ── DIVIDER ────────────────────────────────────────────────────────── */
+  .section-divider {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin: 40px auto;
+    max-width: 800px;
+  }
+
+  .section-divider::before,
+  .section-divider::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+
+  .section-divider span {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--muted);
+    white-space: nowrap;
+  }
+
+  /* ── SUMMARY TABLE ──────────────────────────────────────────────────── */
+  .summary {
+    max-width: 800px;
+    margin: 56px auto 0;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+  }
+
+  .summary-header {
+    padding: 18px 24px;
+    border-bottom: 1px solid var(--border);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--muted);
+    background: var(--surface);
+  }
+
+  .summary-row {
+    display: grid;
+    grid-template-columns: 200px 1fr;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .summary-row:last-child { border-bottom: none; }
+
+  .summary-record {
+    padding: 16px 20px;
+    border-right: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .record-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  .record-dot.blue   { background: var(--blue); }
+  .record-dot.amber  { background: var(--amber); }
+  .record-dot.teal   { background: var(--teal); }
+  .record-dot.purple { background: var(--purple); }
+
+  .record-name {
+    font-size: 13px;
+    font-weight: 700;
+  }
+
+  .summary-condition {
+    padding: 16px 20px;
+    font-size: 13px;
+    color: var(--muted);
+    display: flex;
+    align-items: center;
+  }
+
+  /* ── BOM NOTE ───────────────────────────────────────────────────────── */
+  .bom-note {
+    max-width: 800px;
+    margin: 16px auto 0;
+    border: 1px solid var(--purple-dim);
+    border-left: 3px solid var(--purple);
+    border-radius: 8px;
+    padding: 14px 18px;
+    font-size: 13px;
+    color: var(--muted);
+    background: rgba(144,96,208,0.05);
+  }
+
+  .bom-note strong {
+    color: var(--purple);
+    font-weight: 700;
+  }
+
+  .footer {
+    text-align: center;
+    margin-top: 64px;
+    font-size: 11px;
+    color: var(--muted);
+    letter-spacing: 0.05em;
+  }
+</style>
+</head>
+<body>
+
+<div class="page-header">
+  <div class="eyebrow">Sojo Industries · Master Data Initiative</div>
+  <h1>When to Create a New Record</h1>
+  <p class="subtitle">Decision framework for Blueprint · Variation · Item · BOM</p>
+</div>
+
+<div class="tree-wrap">
+  <div class="flow">
+
+    <!-- START -->
+    <div class="node start">New project or change request</div>
+    <div class="arrow-down"></div>
+
+    <!-- ── Q1: BLUEPRINT ───────────────────────────────────────────── -->
+    <div class="node question blue" style="max-width:520px">
+      <div class="node-label">Step 1 — Blueprint</div>
+      <div class="node-title">Is this a new customer, or a new product for an existing customer?</div>
+    </div>
+
+    <div class="branch-row" style="margin-top:24px">
+      <div class="branch-yes">
+        <div class="branch-label yes">Yes</div>
+        <div class="branch-vert"></div>
+        <div class="outcome-node blue">
+          <div class="outcome-action">Create new Blueprint</div>
+          <div class="outcome-sub">Then create a new Variation</div>
+        </div>
+      </div>
+      <div class="branch-center">
+        <div class="branch-line-h" style="margin-top:14px"></div>
+      </div>
+      <div class="branch-no">
+        <div class="branch-label no">No — existing Blueprint</div>
+        <div class="branch-vert"></div>
+        <div style="font-size:12px;color:var(--muted);text-align:center;padding:8px 12px">Evaluate what changed below ↓</div>
+      </div>
+    </div>
+
+    <div class="section-divider"><span>Same Blueprint — evaluate changes</span></div>
+
+    <!-- ── Q2: VARIATION ──────────────────────────────────────────── -->
+    <div class="node question amber" style="max-width:520px">
+      <div class="node-label">Step 2 — Variation</div>
+      <div class="node-title">Did anything change that affects project price?</div>
+      <div class="node-examples">WIP size changed · Pallet qty changed · Labels added or removed</div>
+    </div>
+
+    <div class="branch-row" style="margin-top:24px">
+      <div class="branch-yes">
+        <div class="branch-label yes">Yes</div>
+        <div class="branch-vert"></div>
+        <div class="outcome-node amber">
+          <div class="outcome-action">Create new Variation / PC</div>
+          <div class="outcome-sub">Get Ops + Engineering approval before creating Item</div>
+        </div>
+      </div>
+      <div class="branch-center">
+        <div class="branch-line-h" style="margin-top:14px"></div>
+      </div>
+      <div class="branch-no">
+        <div class="branch-label no">No — same Variation</div>
+        <div class="branch-vert"></div>
+        <div style="font-size:12px;color:var(--muted);text-align:center;padding:8px 12px">Evaluate finished good below ↓</div>
+      </div>
+    </div>
+
+    <div class="section-divider"><span>Same Variation — evaluate finished good</span></div>
+
+    <!-- ── Q3: ITEM ───────────────────────────────────────────────── -->
+    <div class="node question teal" style="max-width:560px">
+      <div class="node-label">Step 3 — Item</div>
+      <div class="node-title">Did the physical pallet change AND does the customer designate it as a new item in their system?</div>
+      <div class="node-examples">Both conditions must be true · See service modification note below</div>
+    </div>
+
+    <div class="branch-row" style="margin-top:24px">
+      <div class="branch-yes">
+        <div class="branch-label yes">Yes — both true</div>
+        <div class="branch-vert"></div>
+        <div class="outcome-node teal">
+          <div class="outcome-action">Create new Item</div>
+          <div class="outcome-sub">Then create a new BOM + BOM Revision</div>
+        </div>
+      </div>
+      <div class="branch-center">
+        <div class="branch-line-h" style="margin-top:14px"></div>
+      </div>
+      <div class="branch-no">
+        <div class="branch-label no">No — one or both false</div>
+        <div class="branch-vert"></div>
+        <div class="outcome-node gray">
+          <div class="outcome-action">Keep existing Item</div>
+          <div class="outcome-sub">Treat as a service modification</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section-divider"><span>Evaluate component recipe</span></div>
+
+    <!-- ── Q4: BOM ────────────────────────────────────────────────── -->
+    <div class="node question purple" style="max-width:520px">
+      <div class="node-label">Step 4 — BOM</div>
+      <div class="node-title">Did the component recipe change?</div>
+      <div class="node-examples">New materials used · A sticker added but item stayed the same · Any component add / remove / qty change</div>
+    </div>
+
+    <div class="branch-row" style="margin-top:24px">
+      <div class="branch-yes">
+        <div class="branch-label yes">Yes</div>
+        <div class="branch-vert"></div>
+        <div class="outcome-node purple">
+          <div class="outcome-action">Create new BOM + BOM Revision</div>
+          <div class="outcome-sub">BOM = parent · BOM Revision = component items</div>
+        </div>
+      </div>
+      <div class="branch-center">
+        <div class="branch-line-h" style="margin-top:14px"></div>
+      </div>
+      <div class="branch-no">
+        <div class="branch-label no">No</div>
+        <div class="branch-vert"></div>
+        <div class="outcome-node gray">
+          <div class="outcome-action">Keep existing BOM</div>
+          <div class="outcome-sub">No changes needed</div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- end .flow -->
+
+  <!-- BOM structure note -->
+  <div class="bom-note" style="margin-top:40px">
+    <strong>BOM structure:</strong> Every BOM always has a BOM Revision attached to it. The BOM is the parent record. The BOM Revision holds the individual component items (packaging materials, raw materials, stickers, etc.).
+  </div>
+
+  <!-- Summary table -->
+  <div class="summary" style="margin-top:40px">
+    <div class="summary-header">Quick reference</div>
+
+    <div class="summary-row">
+      <div class="summary-record">
+        <div class="record-dot blue"></div>
+        <div class="record-name">Blueprint</div>
+      </div>
+      <div class="summary-condition">New customer or new product line</div>
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-record">
+        <div class="record-dot amber"></div>
+        <div class="record-name">Variation / PC</div>
+      </div>
+      <div class="summary-condition">WIP size change · Pallet qty change · Labels added · Anything affecting project price</div>
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-record">
+        <div class="record-dot teal"></div>
+        <div class="record-name">Item</div>
+      </div>
+      <div class="summary-condition">Physical pallet change AND customer designates as new item in their system — both required</div>
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-record">
+        <div class="record-dot purple"></div>
+        <div class="record-name">BOM + Revision</div>
+      </div>
+      <div class="summary-condition">New materials · Sticker added · Any component recipe change</div>
+    </div>
+  </div>
+
+  <!-- Service mod note -->
+  <div class="bom-note" style="border-color:var(--teal-dim);border-left-color:var(--teal);background:rgba(48,200,154,0.04);margin-top:12px">
+    <strong style="color:var(--teal)">Service modification:</strong> A physical change the customer does not designate as a new item in their system. Use the existing Item. Ship &amp; Receive fulfills against the existing item number.
+  </div>
+
+</div><!-- end .tree-wrap -->
+
+<div class="footer">
+  Sojo Industries · Master Data Initiative · Blueprint Decision Framework
+</div>
+
+</body>
+</html>

@@ -1,0 +1,14 @@
+# Claude Code session config (machine-local)
+.claude/
+
+# Unrelated local project
+ledger/
+
+# Stale root copy of the app (live source is blueprint-app/)
+/index.html
+
+# Temp files
+*.tmp.js
+*.tmp
+Thumbs.db
+desktop.ini
