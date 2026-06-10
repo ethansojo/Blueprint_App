@@ -5,7 +5,7 @@
    Edited by the in-app field editor (pencil icons) or directly by Claude. */
 var FIELDS_DATA = {
   "_meta": {
-    "saved": "2026-06-10T15:05:00.000Z"
+    "saved": "2026-06-10T20:46:09.524Z"
   },
   "blueprint": {
     "sections": [
@@ -15,20 +15,20 @@ var FIELDS_DATA = {
           {
             "name": "Customer Name",
             "source": "",
-            "type": "",
+            "type": "var",
             "status": ""
           },
           {
             "name": "Link to Customer Record",
             "source": "",
-            "type": "",
+            "type": "var",
             "status": ""
           },
           {
             "name": "SSA",
             "source": "",
-            "type": "",
-            "status": "new"
+            "type": "var",
+            "status": "moved"
           },
           {
             "name": "Inactive (flag)",
@@ -65,13 +65,13 @@ var FIELDS_DATA = {
         "label": "Pallet & Stack Specifications",
         "fields": [
           {
-            "name": "Shelf Life Days",
+            "name": "WIP Shelf Life Days",
             "source": "Item",
             "type": "",
             "status": "moved"
           },
           {
-            "name": "Minimum Shipping Shelf Life Days",
+            "name": "Finished Shelf Life Days",
             "source": "Item",
             "type": "",
             "status": "moved"
@@ -101,105 +101,105 @@ var FIELDS_DATA = {
         "fields": [
           {
             "name": "# of Flavors",
-            "source": "Item",
-            "type": "",
+            "source": "",
+            "type": "var",
             "status": "moved"
           },
           {
             "name": "Container Size",
-            "source": "Item",
-            "type": "",
+            "source": "",
+            "type": "var",
             "status": "moved"
           },
           {
             "name": "Container Type",
-            "source": "Item",
-            "type": "",
+            "source": "",
+            "type": "var",
             "status": "moved"
           },
           {
             "name": "Container Spec",
-            "source": "Item",
-            "type": "",
+            "source": "",
+            "type": "var",
             "status": "moved"
           },
           {
             "name": "Item Weight",
-            "source": "Item",
-            "type": "",
+            "source": "",
+            "type": "var",
             "status": "moved"
           },
           {
             "name": "Item Regex",
             "source": "Item",
             "type": "",
-            "status": "moved"
+            "status": "rem"
           },
           {
             "name": "Item Regex Message",
             "source": "Item",
             "type": "",
-            "status": "moved"
+            "status": "rem"
           },
           {
             "name": "Finished System Lot Code Format",
             "source": "Item",
             "type": "",
-            "status": "moved"
+            "status": "rem"
           },
           {
             "name": "Finished Lot Code Format Description",
             "source": "Item",
             "type": "",
-            "status": "moved"
+            "status": "rem"
           },
           {
             "name": "WIP System Lot Code Format",
             "source": "Item",
             "type": "",
-            "status": "moved"
+            "status": "rem"
           },
           {
             "name": "WIP Lot Code Format Description",
             "source": "Item",
             "type": "",
-            "status": "moved"
+            "status": "rem"
           },
           {
             "name": "Inbound WIP Lot Location",
             "source": "",
             "type": "",
-            "status": ""
+            "status": "rem"
           },
           {
             "name": "Lot 1: Placement / Format / Description",
             "source": "Item",
             "type": "",
-            "status": "moved"
+            "status": "rem"
           },
           {
             "name": "Lot 1: Example / Notes / Image",
             "source": "Item",
             "type": "",
-            "status": "moved"
+            "status": "rem"
           },
           {
             "name": "Lot 2: Placement / Format / Description",
             "source": "Item",
             "type": "",
-            "status": "moved"
+            "status": "rem"
           },
           {
             "name": "Lot 2: Example / Notes / Image",
             "source": "Item",
             "type": "",
-            "status": "moved"
+            "status": "rem"
           },
           {
             "name": "No Printed Lot Required",
             "source": "",
             "type": "",
-            "status": ""
+            "status": "rem"
           }
         ]
       },
@@ -210,37 +210,37 @@ var FIELDS_DATA = {
             "name": "Outbound Load Requirements",
             "source": "",
             "type": "",
-            "status": ""
+            "status": "moved"
           },
           {
             "name": "Airbag Qty",
             "source": "",
             "type": "",
-            "status": ""
+            "status": "moved"
           },
           {
             "name": "Outbound Load Details",
             "source": "",
             "type": "",
-            "status": ""
+            "status": "moved"
           },
           {
             "name": "Outbound Load Pattern",
             "source": "",
             "type": "",
-            "status": ""
+            "status": "moved"
           },
           {
             "name": "Pallet Placard Instructions",
             "source": "",
             "type": "",
-            "status": ""
+            "status": "moved"
           },
           {
             "name": "Pallet Placard (asset)",
             "source": "",
             "type": "",
-            "status": ""
+            "status": "moved"
           },
           {
             "name": "Load Bars",
@@ -263,25 +263,25 @@ var FIELDS_DATA = {
             "name": "Income Account",
             "source": "Item · RM Item",
             "type": "",
-            "status": "moved"
+            "status": "rem"
           },
           {
             "name": "COGS / Expense Account",
             "source": "Item · RM Item",
             "type": "",
-            "status": "moved"
+            "status": "rem"
           },
           {
             "name": "Asset Account",
             "source": "Item · RM Item",
             "type": "",
-            "status": "moved"
+            "status": "rem"
           },
           {
             "name": "Tax Schedule",
             "source": "Item · RM Item",
             "type": "",
-            "status": "moved"
+            "status": "rem"
           }
         ]
       },
@@ -292,7 +292,7 @@ var FIELDS_DATA = {
             "name": "Printout — purpose unclear?",
             "source": "",
             "type": "",
-            "status": "flag"
+            "status": "rem"
           }
         ]
       }
@@ -307,7 +307,13 @@ var FIELDS_DATA = {
             "name": "Blueprint",
             "source": "",
             "type": "",
-            "status": ""
+            "status": "new"
+          },
+          {
+            "name": "SSA",
+            "source": "",
+            "type": "",
+            "status": "new"
           }
         ]
       },
@@ -329,7 +335,7 @@ var FIELDS_DATA = {
           {
             "name": "Customer",
             "source": "",
-            "type": "bp",
+            "type": "req",
             "status": ""
           },
           {
@@ -341,7 +347,7 @@ var FIELDS_DATA = {
           {
             "name": "Price per Case",
             "source": "",
-            "type": "req",
+            "type": "",
             "status": "new"
           }
         ]
@@ -570,25 +576,25 @@ var FIELDS_DATA = {
           {
             "name": "Touch 1: Flavors",
             "source": "",
-            "type": "bp",
+            "type": "req",
             "status": ""
           },
           {
             "name": "Touch 1: Container Size",
             "source": "",
-            "type": "bp",
+            "type": "req",
             "status": ""
           },
           {
             "name": "Touch 1: Container Spec",
             "source": "",
-            "type": "bp",
+            "type": "req",
             "status": ""
           },
           {
             "name": "Touch 1: Container Type",
             "source": "",
-            "type": "bp",
+            "type": "req",
             "status": ""
           },
           {
@@ -624,13 +630,13 @@ var FIELDS_DATA = {
           {
             "name": "Touch 2: Flavors",
             "source": "",
-            "type": "bp",
+            "type": "req",
             "status": ""
           },
           {
             "name": "Touch 2: Container Size",
             "source": "",
-            "type": "bp",
+            "type": "req",
             "status": ""
           },
           {
@@ -666,19 +672,19 @@ var FIELDS_DATA = {
           {
             "name": "Inbound WIP Cases per Pallet",
             "source": "RM Item",
-            "type": "req",
+            "type": "",
             "status": "new"
           },
           {
             "name": "Finished Good Cases per Pallet",
             "source": "Item",
-            "type": "req",
+            "type": "",
             "status": "new"
           },
           {
             "name": "Packaging Cases per Pallet",
             "source": "Pkg Material",
-            "type": "req",
+            "type": "",
             "status": "new"
           }
         ]
@@ -725,6 +731,12 @@ var FIELDS_DATA = {
           {
             "name": "Shrink Film Image",
             "source": "SOP",
+            "type": "opt",
+            "status": "moved"
+          },
+          {
+            "name": "Pallet Tag",
+            "source": "",
             "type": "opt",
             "status": "moved"
           }
@@ -1153,6 +1165,18 @@ var FIELDS_DATA = {
             "source": "",
             "type": "",
             "status": "new"
+          },
+          {
+            "name": "SOW",
+            "source": "",
+            "type": "",
+            "status": "new"
+          },
+          {
+            "name": "PC approved",
+            "source": "",
+            "type": "",
+            "status": "new"
           }
         ]
       },
@@ -1168,13 +1192,13 @@ var FIELDS_DATA = {
           {
             "name": "Customer",
             "source": "",
-            "type": "bp",
+            "type": "var",
             "status": ""
           },
           {
             "name": "Custom Form",
             "source": "Blueprint",
-            "type": "bp",
+            "type": "var",
             "status": ""
           },
           {
@@ -1232,21 +1256,27 @@ var FIELDS_DATA = {
           },
           {
             "name": "Minimum Shipping Shelf Life Days",
-            "source": "Blueprint",
-            "type": "bp",
-            "status": ""
+            "source": "",
+            "type": "",
+            "status": "rem"
           },
           {
             "name": "Allergens",
             "source": "Blueprint",
-            "type": "bp",
+            "type": "",
             "status": ""
           },
           {
             "name": "Organic",
             "source": "Blueprint",
-            "type": "bp",
+            "type": "",
             "status": ""
+          },
+          {
+            "name": "Quality Fields",
+            "source": "",
+            "type": "",
+            "status": "flag"
           }
         ]
       },
@@ -1271,13 +1301,13 @@ var FIELDS_DATA = {
         "label": "⚠ Configuration Requirements — Removed (live in Blueprint)",
         "fields": [
           {
-            "name": "Printed Lot Format → Blueprint",
+            "name": "Printed Lot Format",
             "source": "",
             "type": "",
             "status": "rem"
           },
           {
-            "name": "Finished System Lot Format → Blueprint",
+            "name": "Finished System Lot Format",
             "source": "",
             "type": "",
             "status": "rem"
@@ -1296,6 +1326,18 @@ var FIELDS_DATA = {
           },
           {
             "name": "Stickering → Blueprint",
+            "source": "",
+            "type": "",
+            "status": "rem"
+          },
+          {
+            "name": "Minimum Shipping Shelf Life Days",
+            "source": "",
+            "type": "",
+            "status": "rem"
+          },
+          {
+            "name": "Finished Good Max Stack Height",
             "source": "",
             "type": "",
             "status": "rem"
@@ -1320,8 +1362,56 @@ var FIELDS_DATA = {
           {
             "name": "Finished Good Max Stack Height",
             "source": "Blueprint",
-            "type": "bp",
+            "type": "req",
+            "status": "rem"
+          },
+          {
+            "name": "Printed Lot Format",
+            "source": "",
+            "type": "",
+            "status": "rem"
+          },
+          {
+            "name": "ALL Finished  Lot Format Fields",
+            "source": "",
+            "type": "",
             "status": ""
+          },
+          {
+            "name": "Item Regex",
+            "source": "",
+            "type": "",
+            "status": ""
+          },
+          {
+            "name": "Item Image",
+            "source": "",
+            "type": "",
+            "status": ""
+          },
+          {
+            "name": "Finished Shelf Life Days",
+            "source": "",
+            "type": "",
+            "status": ""
+          },
+          {
+            "name": "Finished Good Max Stack Height",
+            "source": "",
+            "type": "",
+            "status": ""
+          },
+          {
+            "name": "Load Bars",
+            "source": "",
+            "type": "",
+            "status": "rem"
+          },
+          {
+            "name": "Load Straps",
+            "source": "",
+            "type": "",
+            "status": "rem"
           }
         ]
       },
@@ -1332,7 +1422,7 @@ var FIELDS_DATA = {
             "name": "SOP Link",
             "source": "",
             "type": "opt",
-            "status": "flag"
+            "status": "rem"
           },
           {
             "name": "Eaches per Master CS",
@@ -1344,66 +1434,78 @@ var FIELDS_DATA = {
             "name": "Package Type",
             "source": "",
             "type": "opt",
-            "status": "flag"
+            "status": "rem"
           },
           {
             "name": "Number of Forklifts",
             "source": "",
             "type": "opt",
-            "status": "flag"
+            "status": "rem"
           },
           {
-            "name": "Corner Boards",
+            "name": "x of  Corner Boards",
             "source": "",
             "type": "opt",
-            "status": "flag"
+            "status": ""
           },
           {
-            "name": "Slipsheets",
+            "name": "x of slipsheets",
             "source": "",
             "type": "opt",
-            "status": "flag"
+            "status": ""
           },
           {
             "name": "Pallet Inventory Item",
             "source": "",
             "type": "opt",
-            "status": "flag"
+            "status": ""
           },
           {
             "name": "Load Bars",
-            "source": "Blueprint",
-            "type": "bp",
-            "status": ""
+            "source": "",
+            "type": "",
+            "status": "rem"
           },
           {
             "name": "Enforce 6 Digit Lot Code",
             "source": "",
             "type": "opt",
-            "status": "flag"
+            "status": "rem"
           },
           {
             "name": "Flavors",
             "source": "Blueprint",
-            "type": "bp",
+            "type": "var",
             "status": ""
           },
           {
             "name": "Container Size",
             "source": "Blueprint",
-            "type": "bp",
+            "type": "var",
             "status": ""
           },
           {
             "name": "Container Spec",
             "source": "Blueprint",
-            "type": "bp",
+            "type": "var",
             "status": ""
           },
           {
             "name": "Container Type",
             "source": "Blueprint",
-            "type": "bp",
+            "type": "var",
+            "status": ""
+          },
+          {
+            "name": "slipsheets",
+            "source": "",
+            "type": "var",
+            "status": ""
+          },
+          {
+            "name": "cornerboards",
+            "source": "",
+            "type": "var",
             "status": ""
           }
         ]
@@ -1431,32 +1533,32 @@ var FIELDS_DATA = {
           {
             "name": "WIP Unit Type",
             "source": "",
-            "type": "opt",
+            "type": "var",
             "status": ""
           },
           {
             "name": "Size",
             "source": "",
             "type": "opt",
-            "status": "flag"
+            "status": "rem"
           },
           {
             "name": "Pricing Calculator Approved",
             "source": "",
             "type": "opt",
-            "status": "flag"
+            "status": "rem"
           },
           {
             "name": "Scope of Work Signed",
             "source": "",
             "type": "opt",
-            "status": "flag"
+            "status": "rem"
           },
           {
             "name": "Format Type",
             "source": "",
-            "type": "opt",
-            "status": "flag"
+            "type": "var",
+            "status": "rem"
           }
         ]
       },
@@ -1527,8 +1629,8 @@ var FIELDS_DATA = {
           },
           {
             "name": "Customer",
-            "source": "Blueprint",
-            "type": "bp",
+            "source": "Variation",
+            "type": "var",
             "status": ""
           },
           {
@@ -1590,9 +1692,9 @@ var FIELDS_DATA = {
             "status": ""
           },
           {
-            "name": "Max Warehouse Stacking",
-            "source": "Blueprint",
-            "type": "bp",
+            "name": "WIP Max Stack Height",
+            "source": "",
+            "type": "",
             "status": ""
           }
         ]
@@ -1604,61 +1706,67 @@ var FIELDS_DATA = {
             "name": "Shield Item Type — do we need this?",
             "source": "",
             "type": "opt",
-            "status": "flag"
+            "status": "rem"
           },
           {
-            "name": "Pallet Inventory Item — do we need this?",
+            "name": "Pallet Inventory Item",
             "source": "",
             "type": "opt",
-            "status": "flag"
+            "status": ""
           },
           {
             "name": "Stickering — do we need this?",
             "source": "",
             "type": "opt",
-            "status": "flag"
+            "status": "rem"
           },
           {
-            "name": "Date Code Requirements — do we need this?",
+            "name": "ALL  RM  Lot Format Fields",
             "source": "",
             "type": "opt",
-            "status": "flag"
+            "status": ""
           },
           {
             "name": "Raven Item Name — do we need this?",
             "source": "",
             "type": "opt",
-            "status": "flag"
+            "status": "rem"
           },
           {
             "name": "Container Size",
             "source": "Blueprint",
-            "type": "bp",
+            "type": "var",
             "status": ""
           },
           {
             "name": "Container Spec",
             "source": "Blueprint",
-            "type": "bp",
+            "type": "var",
             "status": ""
           },
           {
             "name": "Container Type",
             "source": "Blueprint",
-            "type": "bp",
+            "type": "var",
             "status": ""
           },
           {
             "name": "Exclude from Lot Validation — do we need this?",
             "source": "",
             "type": "opt",
-            "status": "flag"
+            "status": "rem"
           },
           {
             "name": "Enforce 6 Digit Lot Code — do we need this?",
             "source": "",
             "type": "opt",
-            "status": "flag"
+            "status": "rem"
+          },
+          {
+            "name": "Flavors",
+            "source": "",
+            "type": "var",
+            "status": ""
           }
         ]
       },
@@ -1703,19 +1811,19 @@ var FIELDS_DATA = {
             "name": "Relationship — do we need this?",
             "source": "",
             "type": "opt",
-            "status": "flag"
+            "status": "rem"
           },
           {
-            "name": "Minimum Shipping Shelf Life — do we need this?",
+            "name": "WIP Shelf Life Days",
             "source": "",
             "type": "opt",
-            "status": "flag"
+            "status": ""
           },
           {
             "name": "WIP Unit Type — do we need this?",
             "source": "",
             "type": "opt",
-            "status": "flag"
+            "status": "rem"
           }
         ]
       }
@@ -1752,7 +1860,7 @@ var FIELDS_DATA = {
           {
             "name": "Customer",
             "source": "Blueprint",
-            "type": "bp",
+            "type": "var",
             "status": ""
           }
         ]
@@ -1808,9 +1916,9 @@ var FIELDS_DATA = {
             "status": ""
           },
           {
-            "name": "Max Warehouse Stacking",
-            "source": "Blueprint",
-            "type": "bp",
+            "name": "Packaging Max Warehouse Stack Height",
+            "source": "",
+            "type": "",
             "status": ""
           }
         ]
@@ -1822,37 +1930,37 @@ var FIELDS_DATA = {
             "name": "Shield Item Type — do we need this?",
             "source": "",
             "type": "opt",
-            "status": "flag"
+            "status": "rem"
           },
           {
             "name": "Stickering — do we need this?",
             "source": "",
             "type": "opt",
-            "status": "flag"
+            "status": "rem"
           },
           {
-            "name": "Date Code Requirements — do we need this?",
+            "name": "ALL  PK  Lot Format Fields",
             "source": "",
             "type": "opt",
-            "status": "flag"
+            "status": ""
           },
           {
             "name": "Container Size",
             "source": "Blueprint",
-            "type": "bp",
-            "status": ""
+            "type": "var",
+            "status": "rem"
           },
           {
             "name": "Container Spec",
             "source": "Blueprint",
             "type": "bp",
-            "status": ""
+            "status": "rem"
           },
           {
             "name": "Container Type",
             "source": "Blueprint",
             "type": "bp",
-            "status": ""
+            "status": "rem"
           }
         ]
       },
@@ -1901,19 +2009,19 @@ var FIELDS_DATA = {
             "name": "Blueprint",
             "source": "",
             "type": "req",
-            "status": ""
+            "status": "rem"
           },
           {
             "name": "Variation / PC",
             "source": "",
             "type": "req",
-            "status": ""
+            "status": "rem"
           },
           {
             "name": "Item (via Restrict to Assemblies)",
             "source": "",
-            "type": "req",
-            "status": ""
+            "type": "",
+            "status": "new"
           }
         ]
       },
@@ -1949,6 +2057,12 @@ var FIELDS_DATA = {
             "source": "",
             "type": "req",
             "status": ""
+          },
+          {
+            "name": "Price",
+            "source": "",
+            "type": "",
+            "status": "new"
           }
         ]
       },
@@ -1989,7 +2103,7 @@ var FIELDS_DATA = {
             "name": "Include Children — do we need this?",
             "source": "",
             "type": "opt",
-            "status": "flag"
+            "status": "rem"
           }
         ]
       },
@@ -2026,8 +2140,8 @@ var FIELDS_DATA = {
           {
             "name": "Bill of Materials (parent BOM must exist)",
             "source": "",
-            "type": "req",
-            "status": ""
+            "type": "",
+            "status": "new"
           }
         ]
       },
@@ -2067,13 +2181,13 @@ var FIELDS_DATA = {
             "name": "Effective Start Date — do we need this?",
             "source": "",
             "type": "opt",
-            "status": "flag"
+            "status": "rem"
           },
           {
             "name": "Effective End Date — do we need this?",
             "source": "",
             "type": "opt",
-            "status": "flag"
+            "status": "rem"
           },
           {
             "name": "Inactive",
@@ -2140,26 +2254,32 @@ var FIELDS_DATA = {
           {
             "name": "Blueprint",
             "source": "",
-            "type": "req",
-            "status": ""
+            "type": "",
+            "status": "new"
           },
           {
             "name": "Variation / PC",
             "source": "",
-            "type": "req",
-            "status": ""
+            "type": "",
+            "status": "new"
           },
           {
             "name": "Item (via Item field)",
             "source": "",
-            "type": "req",
-            "status": ""
+            "type": "",
+            "status": "new"
           },
           {
             "name": "BOM (via Bill of Materials)",
             "source": "",
-            "type": "req",
-            "status": ""
+            "type": "",
+            "status": "new"
+          },
+          {
+            "name": "Customer Approved",
+            "source": "",
+            "type": "",
+            "status": "new"
           }
         ]
       },
@@ -2181,7 +2301,7 @@ var FIELDS_DATA = {
           {
             "name": "Customer",
             "source": "Customer Hub",
-            "type": "ch",
+            "type": "var",
             "status": ""
           },
           {
@@ -2193,19 +2313,19 @@ var FIELDS_DATA = {
           {
             "name": "Price Level",
             "source": "Customer Hub",
-            "type": "ch",
+            "type": "bom",
             "status": ""
           },
           {
             "name": "Item",
             "source": "Customer Hub",
-            "type": "ch",
-            "status": ""
+            "type": "",
+            "status": "moved"
           },
           {
             "name": "WIP Delivery Date",
             "source": "Customer Hub",
-            "type": "ch",
+            "type": "req",
             "status": ""
           },
           {
@@ -2792,7 +2912,7 @@ var FIELDS_DATA = {
       "section": "Primary Information",
       "source": "autocalc",
       "method": "Auto-trigger when Work Order activates?",
-      "status": "flag",
+      "status": "rem",
       "notes": "Decision needed — auto-publish or manual?"
     },
     {
@@ -2834,15 +2954,15 @@ var FIELDS_DATA = {
     {
       "name": "Customer Name",
       "section": "Primary Information",
-      "source": "blueprint",
-      "method": "Auto from Blueprint",
+      "source": "variation",
+      "method": "Auto from Variation",
       "status": "confirmed"
     },
     {
       "name": "SSA",
       "section": "Primary Information",
-      "source": "blueprint",
-      "method": "Auto from Blueprint — NEW field to be added",
+      "source": "variation",
+      "method": "Auto from Variation",
       "status": "new",
       "notes": "New field to be added to the Blueprint record"
     },
@@ -2866,7 +2986,7 @@ var FIELDS_DATA = {
       "section": "Primary Information",
       "source": "autocalc",
       "method": "Auto-derived from project approval gate",
-      "status": "flag",
+      "status": "rem",
       "notes": "Decision pending — Customer Order cannot be created without approval, so all SOPs are customer approved by definition."
     },
     {
@@ -2932,7 +3052,7 @@ var FIELDS_DATA = {
       "section": "Summary",
       "source": "blueprint",
       "method": "Auto — purpose unclear",
-      "status": "flag",
+      "status": "rem",
       "notes": "Need to clarify what this field actually controls"
     },
     {
@@ -2959,28 +3079,28 @@ var FIELDS_DATA = {
     {
       "name": "Item Format",
       "section": "Summary",
-      "source": "blueprint",
+      "source": "variation",
       "method": "Auto from Blueprint",
       "status": "confirmed"
     },
     {
       "name": "Size",
       "section": "Summary",
-      "source": "blueprint",
+      "source": "variation",
       "method": "Auto from Blueprint",
       "status": "confirmed"
     },
     {
       "name": "Container Spec",
       "section": "Summary",
-      "source": "blueprint",
+      "source": "variation",
       "method": "Auto from Blueprint",
       "status": "confirmed"
     },
     {
       "name": "Container",
       "section": "Summary",
-      "source": "blueprint",
+      "source": "variation",
       "method": "Auto from Blueprint",
       "status": "confirmed"
     },
@@ -3002,7 +3122,7 @@ var FIELDS_DATA = {
     {
       "name": "Bay",
       "section": "Production",
-      "source": "customerorder",
+      "source": "workorder",
       "method": "Defined at Customer Order level",
       "status": "confirmed"
     },
@@ -3035,17 +3155,17 @@ var FIELDS_DATA = {
       "status": "confirmed"
     },
     {
-      "name": "Cornerboards",
+      "name": "X  of  Cornerboards",
       "section": "Production",
-      "source": "bomline",
-      "method": "Auto from BOM Revision components sublist",
+      "source": "item",
+      "method": "Item",
       "status": "confirmed"
     },
     {
-      "name": "Slipsheet Requirements",
+      "name": "X  of Slipsheet Requirements",
       "section": "Production",
-      "source": "bomline",
-      "method": "Auto from BOM Revision components sublist",
+      "source": "item",
+      "method": "Auto from Item",
       "status": "confirmed"
     },
     {
@@ -3072,15 +3192,15 @@ var FIELDS_DATA = {
     {
       "name": "Pallet WIP Stack Height",
       "section": "Production",
-      "source": "blueprint",
-      "method": "Auto from Blueprint — moved from RM Item",
+      "source": "rmitem",
+      "method": "RM Item",
       "status": "confirmed"
     },
     {
       "name": "Pallet Finished Good Stack Height",
       "section": "Production",
-      "source": "blueprint",
-      "method": "Auto from Blueprint — moved from Item",
+      "source": "item",
+      "method": "Item",
       "status": "confirmed"
     },
     {
@@ -3122,134 +3242,134 @@ var FIELDS_DATA = {
     {
       "name": "Pallet Configuration",
       "section": "Production",
-      "source": "autocalc",
-      "method": "Calculated — formula TBD",
-      "status": "flag",
+      "source": "variation",
+      "method": "Variation",
+      "status": "confirmed",
       "notes": "Define the calculation: Pallet Qty ÷ Stack Height?"
     },
     {
       "name": "Finished System Lot Code Format",
       "section": "Production",
-      "source": "blueprint",
-      "method": "Auto from Blueprint",
+      "source": "item",
+      "method": "Auto from Item",
       "status": "confirmed"
     },
     {
       "name": "Finished System Lot Code Format Description",
       "section": "Production",
-      "source": "blueprint",
-      "method": "Auto from Blueprint",
+      "source": "item",
+      "method": "Auto from Item",
       "status": "confirmed"
     },
     {
       "name": "WIP System Lot Code Format",
       "section": "Production",
-      "source": "blueprint",
-      "method": "Auto from Blueprint",
+      "source": "item",
+      "method": "Auto from item",
       "status": "confirmed"
     },
     {
       "name": "WIP System Lot Code Format Description",
       "section": "Production",
-      "source": "blueprint",
-      "method": "Auto from Blueprint",
+      "source": "item",
+      "method": "Auto from Item",
       "status": "confirmed"
     },
     {
       "name": "Inbound WIP Lot Location",
       "section": "Production",
-      "source": "blueprint",
-      "method": "Auto from Blueprint",
+      "source": "item",
+      "method": "Auto from Item",
       "status": "confirmed"
     },
     {
       "name": "Lot 1 Placement",
       "section": "Printed Lot Format",
-      "source": "blueprint",
+      "source": "item",
       "method": "Auto from Blueprint",
       "status": "confirmed"
     },
     {
       "name": "Lot 1 Format",
       "section": "Printed Lot Format",
-      "source": "blueprint",
+      "source": "item",
       "method": "Auto from Blueprint",
       "status": "confirmed"
     },
     {
       "name": "Lot 1 Description",
       "section": "Printed Lot Format",
-      "source": "blueprint",
+      "source": "item",
       "method": "Auto from Blueprint",
       "status": "confirmed"
     },
     {
       "name": "Lot 1 Example",
       "section": "Printed Lot Format",
-      "source": "blueprint",
+      "source": "item",
       "method": "Auto from Blueprint",
       "status": "confirmed"
     },
     {
       "name": "Lot 1 Notes",
       "section": "Printed Lot Format",
-      "source": "blueprint",
+      "source": "item",
       "method": "Auto from Blueprint",
       "status": "confirmed"
     },
     {
       "name": "Lot 1 Image",
       "section": "Printed Lot Format",
-      "source": "blueprint",
+      "source": "item",
       "method": "Auto from Blueprint",
       "status": "confirmed"
     },
     {
       "name": "Lot 2 Placement",
       "section": "Printed Lot Format",
-      "source": "blueprint",
+      "source": "item",
       "method": "Auto from Blueprint",
       "status": "confirmed"
     },
     {
       "name": "Lot 2 Lot Format",
       "section": "Printed Lot Format",
-      "source": "blueprint",
+      "source": "item",
       "method": "Auto from Blueprint",
       "status": "confirmed"
     },
     {
       "name": "Lot 2 Description",
       "section": "Printed Lot Format",
-      "source": "blueprint",
+      "source": "item",
       "method": "Auto from Blueprint",
       "status": "confirmed"
     },
     {
       "name": "Lot 2 Example",
       "section": "Printed Lot Format",
-      "source": "blueprint",
+      "source": "item",
       "method": "Auto from Blueprint",
       "status": "confirmed"
     },
     {
       "name": "Lot 2 Notes",
       "section": "Printed Lot Format",
-      "source": "blueprint",
+      "source": "item",
       "method": "Auto from Blueprint",
       "status": "confirmed"
     },
     {
       "name": "Lot 2 Image",
       "section": "Printed Lot Format",
-      "source": "blueprint",
+      "source": "item",
       "method": "Auto from Blueprint",
       "status": "confirmed"
     },
     {
       "name": "No Printed Lot Code Required",
       "section": "Printed Lot Format",
-      "source": "blueprint",
+      "source": "item",
       "method": "Auto from Blueprint",
       "status": "confirmed"
     },
@@ -3427,7 +3547,7 @@ var FIELDS_DATA = {
       "section": "Notes / Admin",
       "source": "autocalc",
       "method": "Auto-calc from Item Format?",
-      "status": "flag",
+      "status": "rem",
       "notes": "Confirm if derived or remove entirely"
     },
     {
@@ -3508,6 +3628,20 @@ var FIELDS_DATA = {
       "method": "Auto from Blueprint — full quality field list TBD",
       "status": "flag",
       "notes": "Review with Jeffrey which quality fields belong on the SOP beyond Allergens and Organic"
+    },
+    {
+      "name": "Load Bars",
+      "section": "Outbounds",
+      "source": "blueprint",
+      "method": "",
+      "status": "confirmed"
+    },
+    {
+      "name": "Load Straps",
+      "section": "Outbounds",
+      "source": "blueprint",
+      "method": "",
+      "status": "confirmed"
     }
   ]
 };
