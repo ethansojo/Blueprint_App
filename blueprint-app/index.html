@@ -921,6 +921,7 @@ textarea.fe-input { min-height: 72px; resize: vertical; font-family: 'Manrope', 
       <div class="sm-toolbar">
         <button class="sm-toolbtn" onclick="expandAllSections(true)">Expand all</button>
         <button class="sm-toolbtn" onclick="expandAllSections(false)">Collapse all</button>
+        <button class="sm-toolbtn" title="Download the current field data as fields-data.js — the way to get edits made in a shared copy back into the project" onclick="exportFieldsData()">⬇ Export field data</button>
       </div>
     </header>
     <div class="sm-wrap" id="sourceMapWrap"></div>
@@ -2114,9 +2115,34 @@ function persistFieldsData() {
       feToast('✓ Saved to fields-data.js');
     })
     .catch(() => {
-      try { localStorage.setItem('bpFieldsData', JSON.stringify(FIELDS_DATA)); feToast('✓ Saved locally (browser storage)'); }
+      try { localStorage.setItem('bpFieldsData', JSON.stringify(FIELDS_DATA)); feToast('✓ Saved in THIS browser only — use "Export field data" to share'); }
       catch (e) { feToast('⚠ Save failed'); }
     });
+}
+
+/* Download the current FIELDS_DATA as a fields-data.js file — the round-trip
+   path for edits made in the shared bundle (no server to write to). Send the
+   exported file back / drop it into blueprint-app/ and rebuild. */
+function exportFieldsData() {
+  FIELDS_DATA._meta = { saved: new Date().toISOString() };
+  const body = '/* fields-data.js — canonical Source Map field data.\n   Organized by node, then sections, then fields. Each field: { name, source, type, status }.\n   type codes: req | auto | opt | bp | var | bom | ch | co | "" (none)\n   status codes: moved | new | flag | rem | "" (none)\n   Edited by the in-app field editor (pencil icons) or directly by Claude. */\nvar FIELDS_DATA = ' + JSON.stringify(FIELDS_DATA, null, 2) + ';\n';
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([body], { type: 'application/javascript' }));
+  a.download = 'fields-data.js';
+  document.body.appendChild(a); a.click(); a.remove();
+  feToast('✓ Exported fields-data.js — send this file back to update the project');
+}
+
+/* Console rescue: restore a backed-up snapshot that the freshness check set aside */
+function bpRestoreBackup() {
+  const b = localStorage.getItem('bpFieldsDataBackup');
+  if (!b) { console.warn('No backup snapshot found.'); return false; }
+  FIELDS_DATA = JSON.parse(b);
+  FIELDS_DATA._meta = { saved: new Date().toISOString() };
+  localStorage.setItem('bpFieldsData', JSON.stringify(FIELDS_DATA));
+  refreshSopViews();
+  feToast('✓ Backup restored — review, then Export or save');
+  return true;
 }
 
 let feToastTimer;
@@ -2447,7 +2473,12 @@ try {
     const fileTime = (FIELDS_DATA._meta && FIELDS_DATA._meta.saved) || '';
     const lsTime = (parsed._meta && parsed._meta.saved) || '';
     if (lsTime > fileTime) FIELDS_DATA = parsed;        // ISO strings compare correctly
-    else localStorage.removeItem('bpFieldsData');        // stale snapshot — drop it
+    else {
+      // Stale snapshot — KEEP A BACKUP instead of destroying it (it may hold
+      // unsynced edits). Restore manually via bpRestoreBackup() in the console.
+      try { localStorage.setItem('bpFieldsDataBackup', ls); } catch (e2) {}
+      localStorage.removeItem('bpFieldsData');
+    }
   }
 } catch (e) {}
 /* Migrate SOP fields into FIELDS_DATA on first run so they are editable and
