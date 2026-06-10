@@ -581,35 +581,40 @@ const DF_FLOW = [
 
 /* ── ERD DATA ───────────────────────────────────────────────────────────────
    High-level entity boxes (PK + link fields) with relationship lines.
-   Clicking an entity drills into its full field list, pulled LIVE from
-   FIELDS_DATA — so the ERD detail layer always matches the Source Map.
+   The 🔗 link rows render LIVE from each record's "⚙ Prerequisites" section
+   in FIELDS_DATA (rem-flagged prereqs are skipped automatically), so the ERD
+   stays in sync with Source Map edits. `fks` is only the fallback for
+   entities without a Prerequisites section; `extra` rows are appended after
+   the live prerequisites. Clicking an entity drills into its full field
+   list, also pulled live from FIELDS_DATA.
 ═══════════════════════════════════════════════════════════════════════════ */
 const ERD_ENTITIES = [
   { id: 'blueprint',     x: 460, y: 30,   w: 260, pk: 'Blueprint ID',       fks: ['Customer (link)'] },
-  { id: 'variation',     x: 80,  y: 240,  w: 260, pk: 'PC ID',              fks: ['Blueprint (link) ✦', 'Item (link via price levels)'] },
-  { id: 'item',          x: 460, y: 240,  w: 260, pk: 'VP# / Internal ID',  fks: ['Blueprint (link) ✦', 'Variation / PC (link) ✦'] },
-  { id: 'rmitem',        x: 840, y: 200,  w: 260, pk: 'RM# / Internal ID',  fks: ['Blueprint (link) ✦', 'Variation / PC (link) ✦'] },
-  { id: 'pkgitem',       x: 840, y: 400,  w: 260, pk: 'Item Name / Number', fks: ['Blueprint (link) ✦', 'Variation / PC (link) ✦'] },
-  { id: 'bom',           x: 290, y: 480,  w: 250, pk: 'BOM Name',           fks: ['Restrict to Assemblies → Item'] },
-  { id: 'bomline',       x: 590, y: 480,  w: 260, pk: 'Revision Name',      fks: ['Bill of Materials (parent)', 'Component rows → Item · RM · Pkg'] },
+  { id: 'variation',     x: 80,  y: 240,  w: 260, pk: 'PC ID',              extra: ['Item (link via price levels)'] },
+  { id: 'item',          x: 460, y: 240,  w: 260, pk: 'VP# / Internal ID' },
+  { id: 'rmitem',        x: 840, y: 200,  w: 260, pk: 'RM# / Internal ID' },
+  { id: 'pkgitem',       x: 840, y: 400,  w: 260, pk: 'Item Name / Number' },
+  { id: 'bom',           x: 290, y: 480,  w: 250, pk: 'BOM Name' },
+  { id: 'bomline',       x: 560, y: 480,  w: 250, pk: 'Revision Name',      extra: ['Component rows → Item · RM · Pkg'] },
   { id: 'approval',      x: 80,  y: 720,  w: 260, pk: 'Approval ID',        fks: ['SOW / Docusign contract'] },
-  { id: 'customerorder', x: 450, y: 700,  w: 280, pk: 'CO ID',              fks: ['Variation / PC', 'Item', 'BOM + Revision', 'Customer (Hub)'] },
-  { id: 'workorder',     x: 450, y: 910,  w: 280, pk: 'WO # (tranid)',      fks: ['Customer Order', 'BOM + Revision (locked)'] },
-  { id: 'sop',           x: 450, y: 1100, w: 280, pk: 'SOP Record ID',      fks: ['Work Order (1:1)', 'Reads all upstream records'] },
+  { id: 'customerorder', x: 450, y: 700,  w: 280, pk: 'CO ID',              extra: ['Customer (Hub)'] },
+  { id: 'workorder',     x: 450, y: 940,  w: 280, pk: 'WO # (tranid)' },
+  { id: 'sop',           x: 450, y: 1150, w: 280, pk: 'SOP Record ID',      fks: ['Work Order (1:1)', 'Reads all upstream records'] },
 ];
 
 const ERD_LINKS = [
-  { from: 'variation',     to: 'blueprint',     card: 'N : 1', label: 'requires' },
+  { from: 'variation',     to: 'blueprint',     card: 'N : 1', label: 'requires · SSA signed' },
   { from: 'item',          to: 'blueprint',     card: 'N : 1', label: 'requires' },
-  { from: 'item',          to: 'variation',     card: '1 : N', label: 'price levels' },
+  { from: 'item',          to: 'variation',     card: '1 : N', label: 'price levels · SOW + PC approved gates' },
   { from: 'rmitem',        to: 'blueprint',     card: 'N : 1', label: '' },
   { from: 'pkgitem',       to: 'blueprint',     card: 'N : 1', label: '' },
   { from: 'bom',           to: 'item',          card: 'N : 1', label: 'restrict to assemblies' },
   { from: 'bomline',       to: 'bom',           card: 'N : 1', label: 'revision of' },
   { from: 'bomline',       to: 'rmitem',        card: 'N : M', label: 'component rows', dashed: true },
   { from: 'bomline',       to: 'pkgitem',       card: 'N : M', label: '', dashed: true },
-  { from: 'customerorder', to: 'approval',      card: '',      label: 'gated by', dashed: true },
+  { from: 'customerorder', to: 'approval',      card: '',      label: 'gated by customer approval', dashed: true },
   { from: 'customerorder', to: 'variation',     card: 'N : 1', label: '' },
+  { from: 'customerorder', to: 'item',          card: 'N : 1', label: '' },
   { from: 'customerorder', to: 'bomline',       card: 'N : 1', label: 'locked revision' },
   { from: 'workorder',     to: 'customerorder', card: 'N : 1', label: 'generated from' },
   { from: 'sop',           to: 'workorder',     card: '1 : 1', label: 'auto-generated' },
