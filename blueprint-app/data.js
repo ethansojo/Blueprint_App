@@ -35,21 +35,23 @@ const NODE_COLORS = {
   workorder:     { bg:'#180404', bdr:'#A02828', tc:'#E08080', dc:'#B05858', label:'WORK ORDER · RUN ACTUALS',         title:'Work Order',          sub:'Auto-generated from Customer Order — captures actuals' },
   autocalc:      { bg:'#0C0C0E', bdr:'#404048', tc:'#9090A0', dc:'#606068', label:'AUTO-CALCULATED · SOP GENERATION', title:'Auto-Calc',           sub:'Derived from upstream records at SOP generation' },
   sop:           { bg:'#0E0E22', bdr:'#5060D0', tc:'#A0B0F0', dc:'#7888C0', label:'SOP · AUTO-GENERATED OUTPUT',     title:'SOP',                 sub:'Auto-assembled — target: ~12 fields confirmed manually' },
+  productionplan:{ bg:'#04150F', bdr:'#2AAA8A', tc:'#5ED4B2', dc:'#3E8F76', label:'PRODUCTION PLAN · FLEXIBLE EXECUTION', title:'Production Plan', sub:'Auto-created from the CO — all post-approval changes land here' },
+  changeorder:   { bg:'#170E03', bdr:'#D08840', tc:'#E8A858', dc:'#A8742F', label:'CHANGE ORDER · FORMAL AMENDMENT', title:'Change Order',        sub:'Customer-driven changes after CO approval — audit trail' },
 };
 
 /* ── Node metadata for Blueprint Flow view ──────────────────────────────── */
 const NODE_META = {
   blueprint: {
-    when: 'New customer, or new product line for an existing customer',
-    who: 'Engineering or Sales during customer onboarding',
-    facts: ['Created once per customer/product relationship','Contains lot code formats, container specs, outbound defaults','All downstream records inherit from this','Never changes day-to-day'],
-    prereqs: 'None — this is the top-level record',
+    when: 'Existing project: it already exists — start here for changes. New project: auto-created from the PC at intake',
+    who: 'Sales — or auto-created by the system on the new-project path',
+    facts: ['Created once per customer/product relationship','Auto-populates as downstream records fill in — fields roll up ⤴ from Variation, Item, RM Item, Packaging','Contains lot code formats, quality, outbound + accounting defaults','Never changes day-to-day'],
+    prereqs: 'None — this is the top-level record (auto-created on the new-project path)',
   },
   variation: {
-    when: 'Anything that changes project price: WIP size, pallet qty, labels added/removed',
-    who: 'Engineering + Operations (requires both approvals)',
-    facts: ['Pricing calculator + production configuration','Requires Ops + Engineering approval before Item creation','Contains headcount, throughput, and volume assumptions','Flows: Blueprint → Variation → Customer Order → Work Order → SOP'],
-    prereqs: 'Blueprint must exist first',
+    when: 'NEW PROJECTS START HERE — commercial dev prices first, the Blueprint auto-creates behind it. For existing projects: anything that changes price (WIP size, pallet qty, labels)',
+    who: 'Sales / commercial development',
+    facts: ['Pricing calculator + production configuration','The new-project entry point — minimal friction for commercial dev','Requires Ops + Engineering approval before Item creation','Flows: Variation → Customer Order → Work Order → SOP'],
+    prereqs: 'Blueprint (auto-created if it does not exist yet) + SSA signed',
   },
   item: {
     when: 'Physical pallet changed AND customer designates it as a new item in their system (both required)',
@@ -98,6 +100,18 @@ const NODE_META = {
     who: 'System auto-assembles; ~12 fields confirmed manually',
     facts: ['Pulls from all upstream records','Target: zero re-entry of data','Ops confirms: Published, Bay, and any per-run overrides','Drives production floor execution'],
     prereqs: 'Work Order must exist',
+  },
+  productionplan: {
+    when: 'Auto-created the moment the Customer Order is approved — pre-populated from the CO',
+    who: 'System auto-creates · Planning + Ops edit freely',
+    facts: ['The flexible working document — ALL post-approval changes land here','Tracks current planned quantity, BOM version, and schedule','Generates all Work Orders (WOs feed off the Plan, not the CO)','Plan closure triggers the final scope-vs-actual comparison report','Links back to its parent CO — which stays locked and untouched'],
+    prereqs: 'Customer Order (approved)',
+  },
+  changeorder: {
+    when: 'The customer requests a change after CO approval',
+    who: 'CSMs / commercial log it — it updates the Production Plan',
+    facts: ['Captures what changed, why, who authorized, and when','Updates the Production Plan accordingly','NEVER touches the original CO — the contract stays intact','Full audit trail of every customer-driven change'],
+    prereqs: 'Customer Order + Production Plan',
   },
 };
 

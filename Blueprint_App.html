@@ -44,21 +44,23 @@ const NODE_COLORS = {
   workorder:     { bg:'#180404', bdr:'#A02828', tc:'#E08080', dc:'#B05858', label:'WORK ORDER · RUN ACTUALS',         title:'Work Order',          sub:'Auto-generated from Customer Order — captures actuals' },
   autocalc:      { bg:'#0C0C0E', bdr:'#404048', tc:'#9090A0', dc:'#606068', label:'AUTO-CALCULATED · SOP GENERATION', title:'Auto-Calc',           sub:'Derived from upstream records at SOP generation' },
   sop:           { bg:'#0E0E22', bdr:'#5060D0', tc:'#A0B0F0', dc:'#7888C0', label:'SOP · AUTO-GENERATED OUTPUT',     title:'SOP',                 sub:'Auto-assembled — target: ~12 fields confirmed manually' },
+  productionplan:{ bg:'#04150F', bdr:'#2AAA8A', tc:'#5ED4B2', dc:'#3E8F76', label:'PRODUCTION PLAN · FLEXIBLE EXECUTION', title:'Production Plan', sub:'Auto-created from the CO — all post-approval changes land here' },
+  changeorder:   { bg:'#170E03', bdr:'#D08840', tc:'#E8A858', dc:'#A8742F', label:'CHANGE ORDER · FORMAL AMENDMENT', title:'Change Order',        sub:'Customer-driven changes after CO approval — audit trail' },
 };
 
 /* ── Node metadata for Blueprint Flow view ──────────────────────────────── */
 const NODE_META = {
   blueprint: {
-    when: 'New customer, or new product line for an existing customer',
-    who: 'Engineering or Sales during customer onboarding',
-    facts: ['Created once per customer/product relationship','Contains lot code formats, container specs, outbound defaults','All downstream records inherit from this','Never changes day-to-day'],
-    prereqs: 'None — this is the top-level record',
+    when: 'Existing project: it already exists — start here for changes. New project: auto-created from the PC at intake',
+    who: 'Sales — or auto-created by the system on the new-project path',
+    facts: ['Created once per customer/product relationship','Auto-populates as downstream records fill in — fields roll up ⤴ from Variation, Item, RM Item, Packaging','Contains lot code formats, quality, outbound + accounting defaults','Never changes day-to-day'],
+    prereqs: 'None — this is the top-level record (auto-created on the new-project path)',
   },
   variation: {
-    when: 'Anything that changes project price: WIP size, pallet qty, labels added/removed',
-    who: 'Engineering + Operations (requires both approvals)',
-    facts: ['Pricing calculator + production configuration','Requires Ops + Engineering approval before Item creation','Contains headcount, throughput, and volume assumptions','Flows: Blueprint → Variation → Customer Order → Work Order → SOP'],
-    prereqs: 'Blueprint must exist first',
+    when: 'NEW PROJECTS START HERE — commercial dev prices first, the Blueprint auto-creates behind it. For existing projects: anything that changes price (WIP size, pallet qty, labels)',
+    who: 'Sales / commercial development',
+    facts: ['Pricing calculator + production configuration','The new-project entry point — minimal friction for commercial dev','Requires Ops + Engineering approval before Item creation','Flows: Variation → Customer Order → Work Order → SOP'],
+    prereqs: 'Blueprint (auto-created if it does not exist yet) + SSA signed',
   },
   item: {
     when: 'Physical pallet changed AND customer designates it as a new item in their system (both required)',
@@ -107,6 +109,18 @@ const NODE_META = {
     who: 'System auto-assembles; ~12 fields confirmed manually',
     facts: ['Pulls from all upstream records','Target: zero re-entry of data','Ops confirms: Published, Bay, and any per-run overrides','Drives production floor execution'],
     prereqs: 'Work Order must exist',
+  },
+  productionplan: {
+    when: 'Auto-created the moment the Customer Order is approved — pre-populated from the CO',
+    who: 'System auto-creates · Planning + Ops edit freely',
+    facts: ['The flexible working document — ALL post-approval changes land here','Tracks current planned quantity, BOM version, and schedule','Generates all Work Orders (WOs feed off the Plan, not the CO)','Plan closure triggers the final scope-vs-actual comparison report','Links back to its parent CO — which stays locked and untouched'],
+    prereqs: 'Customer Order (approved)',
+  },
+  changeorder: {
+    when: 'The customer requests a change after CO approval',
+    who: 'CSMs / commercial log it — it updates the Production Plan',
+    facts: ['Captures what changed, why, who authorized, and when','Updates the Production Plan accordingly','NEVER touches the original CO — the contract stays intact','Full audit trail of every customer-driven change'],
+    prereqs: 'Customer Order + Production Plan',
   },
 };
 
@@ -5066,6 +5080,29 @@ textarea.fe-input { min-height: 72px; resize: vertical; font-family: 'Manrope', 
 .erd-frow span:first-child { color: #D2D2DE; }
 .erd-frow span:last-child { font-family: 'JetBrains Mono', monospace; font-size: 9px; font-weight: 700; white-space: nowrap; padding-top: 2px; }
 
+/* ─── Flow Diagram — dual entry paths + post-CO production layer ────────── */
+.flow-entry-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; width: 100%; }
+.flow-entry { border: 1.5px dashed; border-radius: 12px; padding: 12px 16px; background: rgba(255,255,255,0.02); cursor: pointer; transition: background 0.15s; }
+.flow-entry:hover { background: rgba(255,255,255,0.05); }
+.flow-entry .fe-eyebrow { font-family: 'JetBrains Mono', monospace; font-size: 9px; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase; margin-bottom: 4px; }
+.flow-entry .fe-title { font-size: 14px; font-weight: 800; margin-bottom: 4px; }
+.flow-entry .fe-sub { font-size: 11px; color: var(--muted); line-height: 1.5; }
+.flow-entry.existing { border-color: rgba(90,156,216,0.55); }
+.flow-entry.existing .fe-eyebrow, .flow-entry.existing .fe-title { color: #5A9CD8; }
+.flow-entry.fresh { border-color: rgba(212,168,48,0.55); }
+.flow-entry.fresh .fe-eyebrow, .flow-entry.fresh .fe-title { color: #D4A830; }
+.flow-pair { display: grid; grid-template-columns: 1fr 132px 1fr; gap: 0; width: 100%; align-items: center; }
+.flow-pair-mid { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 0 8px; }
+.flow-pair-mid .arr { font-size: 22px; color: var(--muted); line-height: 1; }
+.flow-pair-mid .lbl { font-family: 'JetBrains Mono', monospace; font-size: 8px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; text-align: center; line-height: 1.5; }
+.flow-pair-mid .lbl.tovar  { color: #5A9CD8; }
+.flow-pair-mid .lbl.tobp   { color: #D4A830; }
+.flow-node.pp  { border-color: #2AAA8A; background: #04150F; }
+.flow-node.chg { border-color: #D08840; background: #170E03; }
+.fn-label.pp  { color: #5ED4B2; } .fn-title.pp  { color: #5ED4B2; }
+.fn-label.chg { color: #E8A858; } .fn-title.chg { color: #E8A858; }
+.conn-lbl { font-family: 'JetBrains Mono', monospace; font-size: 8.5px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); padding: 2px 0; }
+
 .app-footer { text-align: center; padding: 24px 20px; background: var(--bg); border-top: 1px solid var(--border); font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--muted); letter-spacing: 0.08em; }
 </style>
 </head>
@@ -5154,7 +5191,7 @@ textarea.fe-input { min-height: 72px; resize: vertical; font-family: 'Manrope', 
     <div class="flow-intro">
       <div class="eyebrow">Sojo Industries · Master Data Architecture</div>
       <h1>Blueprint Data Flow</h1>
-      <p>How product data flows through NetSuite — from Blueprint to SOP. Click any record to learn when it's created and what it contains.</p>
+      <p>Two ways in: existing projects start at the Blueprint; new projects start at the PC and the Blueprint auto-creates behind them. After the Customer Order locks, the Production Plan carries all changes through to the floor. Click any record to learn when it's created and what it contains.</p>
     </div>
     <div class="flow-diagram" id="flowDiagram"></div>
   </div>
@@ -5383,7 +5420,9 @@ function openNodePanel(nodeId) {
     <div class="panel-row"><div class="panel-label">Created By</div><div class="panel-method">${meta.who}</div></div>
     <div class="panel-row"><div class="panel-label">Key Facts</div><div class="panel-facts">${factsHTML}</div></div>
     <div class="panel-row"><div class="panel-label">Prerequisites</div><div class="panel-prereq">${meta.prereqs}</div></div>
-    <button class="panel-action" onclick="switchView('map');setTimeout(()=>scrollToMapSection('${nodeId}'),200)">View Fields in Source Map →</button>
+    ${(typeof FIELDS_DATA !== 'undefined' && FIELDS_DATA[nodeId])
+      ? `<button class="panel-action" onclick="switchView('map');setTimeout(()=>scrollToMapSection('${nodeId}'),200)">View Fields in Source Map →</button>`
+      : `<div class="panel-notes">Proposed record — not yet built in NetSuite or mapped in the Source Map. See the Production Integrity sub-view for the full design.</div>`}
   `);
 }
 
@@ -6119,16 +6158,18 @@ function openErdPanel(id) {
    ╚═════════════════════════════════════════════════════════════════════════╝ */
 /* Who creates each record — shown as a label on every Flow Diagram card */
 const CREATORS = {
-  blueprint:     'Sales',
-  variation:     'Sales',
-  item:          'CSMs',
-  bom:           'CSMs',
-  rmitem:        'CSMs',
-  pkgitem:       'CSMs',
-  approval:      'CSMs',
-  customerorder: 'CSMs, Customer Hub, Planners',
-  workorder:     'Planners',
-  sop:           'System (automatic)',
+  blueprint:      'Sales · or auto-created from the PC (new projects)',
+  variation:      'Sales',
+  item:           'CSMs',
+  bom:            'CSMs',
+  rmitem:         'CSMs',
+  pkgitem:        'CSMs',
+  approval:       'CSMs',
+  customerorder:  'CSMs, Customer Hub, Planners',
+  productionplan: 'System (auto from CO) · edited by Planners + Ops',
+  changeorder:    'CSMs (customer-driven)',
+  workorder:      'Planners',
+  sop:            'System (automatic)',
 };
 function buildBlueprintFlow() {
   const container = document.getElementById('flowDiagram');
@@ -6148,25 +6189,69 @@ function buildBlueprintFlow() {
   function connector() { const el = document.createElement('div'); el.className = 'flow-connector'; el.innerHTML = '<div class="fc-line"></div><div class="fc-arrow"></div>'; return el; }
   function row(...nodes) { const el = document.createElement('div'); el.className = 'flow-row'; nodes.forEach(n => el.appendChild(n)); return el; }
 
-  container.appendChild(row(node('blueprint','bp','Blueprint','Blueprint','Customer-level config · Defined once per product relationship · Immutable day-to-day','New customer or new product for an existing customer')));
+  function labeledConnector(label) {
+    const el = document.createElement('div'); el.className = 'flow-connector';
+    el.innerHTML = `<div class="fc-line"></div><div class="conn-lbl">${label}</div><div class="fc-line"></div><div class="fc-arrow"></div>`;
+    return el;
+  }
+
+  /* ── ENTRY LAYER — two ways into the chain ─────────────────────────────── */
+  const entryRow = document.createElement('div');
+  entryRow.className = 'flow-entry-row';
+  entryRow.innerHTML = `
+    <div class="flow-entry existing" onclick="openPanel('<div class=&quot;panel-eyebrow&quot; style=&quot;color:#5A9CD8&quot;>Entry Path</div><h2 class=&quot;panel-field-name&quot; style=&quot;color:#5A9CD8&quot;>Existing Project</h2><div class=&quot;panel-row&quot;><div class=&quot;panel-label&quot;>How it works</div><div class=&quot;panel-method&quot;>The Blueprint already exists for this customer/product. Evaluate what changed (see the Decision Tree) and create a new Variation / PC under it. The Blueprint stays stable — only the varying layer changes.</div></div>')">
+      <div class="fe-eyebrow">Start here · Existing project</div>
+      <div class="fe-title">♻ Change to an existing project</div>
+      <div class="fe-sub">The Blueprint already exists → evaluate what changed (Decision Tree) → create a new Variation / PC under it.</div>
+    </div>
+    <div class="flow-entry fresh" onclick="openPanel('<div class=&quot;panel-eyebrow&quot; style=&quot;color:#D4A830&quot;>Entry Path</div><h2 class=&quot;panel-field-name&quot; style=&quot;color:#D4A830&quot;>New Project</h2><div class=&quot;panel-row&quot;><div class=&quot;panel-label&quot;>How it works</div><div class=&quot;panel-method&quot;>Commercial development starts at the PC to get a price in front of the customer fast — no Blueprint paperwork first. The system auto-creates a minimal Blueprint behind it, and the Blueprint auto-populates as the chain fills in (fields roll up from the Variation, Item, RM Item, and Packaging records).</div></div>')">
+      <div class="fe-eyebrow">Start here · New project</div>
+      <div class="fe-title">🆕 Fresh project — price first</div>
+      <div class="fe-sub">Commercial dev starts at the PC → Blueprint auto-creates behind it ⟲ and auto-populates as records fill in.</div>
+    </div>`;
+  container.appendChild(entryRow);
   container.appendChild(connector());
-  const varNode = node('variation','var','Variation / PC','Variation / PC','Pricing calculator + production configuration · Requires Ops + Engineering approval');
-  varNode.style.flex = '2';
-  container.appendChild(row(varNode, node('item','itm','Item','Item','Customer-designated finished pallet unit in NetSuite'), node('bom','bom','BOM + Revision','BOM + BOM Revision','Component recipe: RM Items, Packaging Materials, consumables')));
+
+  /* ── BLUEPRINT ⇄ VARIATION pair (two-way relationship) ─────────────────── */
+  const pair = document.createElement('div');
+  pair.className = 'flow-pair';
+  const bpNode = node('blueprint','bp','Blueprint','Blueprint','Customer-level config · Defined once per relationship · AUTO-POPULATES as the chain fills in ⟲','Existing path: already exists · New path: auto-created from the PC');
+  const varNode = node('variation','var','Variation / PC','Variation / PC','Pricing calculator + production configuration · NEW PROJECTS START HERE · Requires Ops + Engineering approval','Anything that changes price — or a brand-new project');
+  const mid = document.createElement('div');
+  mid.className = 'flow-pair-mid';
+  mid.innerHTML = `
+    <div class="lbl tobp">⟲ new: PC auto-creates + auto-populates blueprint</div>
+    <div class="arr">⇄</div>
+    <div class="lbl tovar">existing: blueprint sources customer + SSA</div>`;
+  pair.appendChild(bpNode); pair.appendChild(mid); pair.appendChild(varNode);
+  container.appendChild(pair);
+  container.appendChild(connector());
+
+  /* ── COMPONENT LAYER ───────────────────────────────────────────────────── */
+  container.appendChild(row(node('item','itm','Item','Item','Customer-designated finished pallet unit in NetSuite · Gated by SOW signed + PC approved'), node('bom','bom','BOM + Revision','BOM + BOM Revision','Component recipe: RM Items, Packaging Materials, consumables')));
   container.appendChild(connector());
   const t2Row = document.createElement('div'); t2Row.className = 'flow-row'; t2Row.style.maxWidth = '580px';
   t2Row.appendChild(node('rmitem','rm','RM Item','RM Item','Inbound WIP / raw material record used in BOM Revision'));
   t2Row.appendChild(node('pkgitem','pkg','Packaging Material','Packaging Material','Labels, stickers, and packaging components in BOM Revision'));
   container.appendChild(t2Row);
   container.appendChild(connector());
+
+  /* ── COMMERCIAL GATE + ORDER ───────────────────────────────────────────── */
   const caEl = document.createElement('div'); caEl.className = 'flow-node ca'; caEl.style.maxWidth = '480px'; caEl.style.borderRadius = '32px'; caEl.style.textAlign = 'center';
   caEl.innerHTML = '<div class="fn-label ca">Gate</div><div class="fn-title ca">Customer Approval</div><div class="fn-sub">SOW sign-off — required before Customer Order can be created</div><div class="fn-creator" style="justify-content:center"><span class="lbl">Created by</span>CSMs</div>';
   caEl.addEventListener('click', () => openPanel(`<div class="panel-eyebrow" style="color:var(--c-ca)">Gate Record</div><h2 class="panel-field-name" style="color:var(--c-ca)">Customer Approval</h2><div class="panel-row"><div class="panel-label">Purpose</div><div class="panel-method">SOW sign-off gate. The Customer Order cannot be created until Customer Approval is on file. Holds the Docusign contract.</div></div><div class="panel-row"><div class="panel-label">Created By</div><div class="panel-method">Sales / Commercial team during new customer onboarding</div></div>`));
   container.appendChild(caEl);
   container.appendChild(connector());
-  container.appendChild(row(node('customerorder','co','Customer Order','Customer Order','Per-run order instance · Pulls from Customer Hub: PO, quantity, dates · Generates Work Orders','Customer submits a run order through Customer Hub')));
-  container.appendChild(connector());
-  container.appendChild(row(node('workorder','wo','Work Order','Work Order','Auto-generated from Customer Order · Captures actuals: location, machine, headcount, run notes','Auto-created from Customer Order')));
+  container.appendChild(row(node('customerorder','co','Customer Order · 🔒 Locked Scope','Customer Order','The contract — agreed quantity, price, BOM, timeline · LOCKED at approval, never edited directly','Customer submits a run order through Customer Hub')));
+
+  /* ── POST-CO PRODUCTION LAYER (Production Plan + Change Orders) ────────── */
+  container.appendChild(labeledConnector('auto-creates'));
+  const ppNode = node('productionplan','pp','Production Plan · ✎ Flexible','Production Plan','Pre-populated from the CO · ALL post-approval changes land here · Tracks current qty, BOM version, schedule');
+  ppNode.style.flex = '2';
+  const chgNode = node('changeorder','chg','Change Order · Amendment','Change Order','Customer-driven changes after approval → updates the Production Plan · NEVER touches the CO · Full audit trail');
+  container.appendChild(row(ppNode, chgNode));
+  container.appendChild(labeledConnector('generates'));
+  container.appendChild(row(node('workorder','wo','Work Order','Work Order','Generated from the PRODUCTION PLAN (not the CO) · Captures actuals: location, machine, headcount, run notes','Auto-created from the Production Plan')));
   container.appendChild(connector());
   container.appendChild(row(node('sop','sop','SOP · Output','Standard Operating Procedure','Auto-assembled from all upstream records · Target: ~12 fields confirmed manually · Zero re-entry','Auto-generated when Work Order activates')));
 }
