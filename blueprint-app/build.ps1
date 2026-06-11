@@ -8,12 +8,14 @@ $here   = $PSScriptRoot
 $index  = Join-Path $here 'index.html'
 $data   = Join-Path $here 'data.js'
 $fields = Join-Path $here 'fields-data.js'
+$intake = Join-Path $here 'intake-data.js'
 $out    = Join-Path (Split-Path $here -Parent) 'Blueprint_App.html'
 
 # Read files as UTF-8 (so multi-byte characters survive intact)
 $indexHtml = [System.IO.File]::ReadAllText($index,  [System.Text.Encoding]::UTF8)
 $dataJs    = [System.IO.File]::ReadAllText($data,   [System.Text.Encoding]::UTF8)
 $fieldsJs  = [System.IO.File]::ReadAllText($fields, [System.Text.Encoding]::UTF8)
+$intakeJs  = [System.IO.File]::ReadAllText($intake, [System.Text.Encoding]::UTF8)
 
 # Build the inline replacements (note: no non-ASCII chars in this script source)
 $banner  = "/* Inlined from data.js -- edit blueprint-app/data.js then re-run build.ps1 */"
@@ -32,9 +34,16 @@ $bundled  = [System.Text.RegularExpressions.Regex]::Replace(
               $bundled,
               $pattern2,
               [System.Text.RegularExpressions.MatchEvaluator]{ param($m) $inline2 })
+$banner3 = "/* Inlined from intake-data.js -- edit blueprint-app/intake-data.js then re-run build.ps1 */"
+$inline3 = "<script>`r`n$banner3`r`n$intakeJs`r`n</script>"
+$pattern3 = '<script\s+src="intake-data\.js"[^>]*>\s*</script>'
+$bundled  = [System.Text.RegularExpressions.Regex]::Replace(
+              $bundled,
+              $pattern3,
+              [System.Text.RegularExpressions.MatchEvaluator]{ param($m) $inline3 })
 
 # Sanity checks
-if ($bundled -match '<script\s+src="(data|fields-data)\.js"') {
+if ($bundled -match '<script\s+src="(data|fields-data|intake-data)\.js"') {
   Write-Error 'Build failed: external js reference still present in output.'
   exit 1
 }
@@ -44,6 +53,10 @@ if (-not ($bundled -match 'const\s+SOURCES')) {
 }
 if (-not ($bundled -match 'var\s+FIELDS_DATA')) {
   Write-Error 'Build failed: fields-data.js content not detected in output.'
+  exit 1
+}
+if (-not ($bundled -match 'const\s+INTAKE_SECTIONS')) {
+  Write-Error 'Build failed: intake-data.js content not detected in output.'
   exit 1
 }
 

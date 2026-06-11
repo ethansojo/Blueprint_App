@@ -4295,6 +4295,223 @@ var FIELDS_DATA = {
 };
 
 </script>
+<script>
+/* Inlined from intake-data.js -- edit blueprint-app/intake-data.js then re-run build.ps1 */
+/* intake-data.js — Customer Intake Form (Proof of Concept)
+   ═══════════════════════════════════════════════════════════════════════════
+   All form definitions live HERE — the form renders entirely from this file.
+   - INTAKE_SECTIONS  → sections, fields, types, options, helpers, required
+                        flags, conditional rules ("add a field to Section 3")
+   - BOM_ROW_FIELDS   → the repeating Section 8 component rows
+   - APPROVED_SUPPLIERS → supplier dropdown list ("add a supplier")
+   - INTAKE_FIELD_MAP → NetSuite destinations { record, section, fieldName }
+   - COMPLEXITY_CONFIG → scoring weights + banding ("make custom lot codes weigh 3")
+   - INTERNAL_ONLY_FIELDS → fields customers can never provide
+
+   Field shape: { id, label, type, required, helper, options[], showIf }
+   type: text | email | date | number | select | multiselect | textarea | file | note
+   showIf: { field:'otherFieldId', equals:'Yes' } or { field, equalsAny:['1','2'] }
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+const APPROVED_SUPPLIERS = ['DrinkPak', 'Zumbiel', 'Other (specify)'];
+
+const INTAKE_SECTIONS = [
+  { id: 's1', num: 1, title: 'Project Overview', scope: 'project',
+    desc: 'Filled once per submission — who you are and when you need this running.',
+    fields: [
+      { id: 'customerName',   label: 'Customer Name',          type: 'text',  required: true, helper: "Your company's legal name as it appears on purchase orders" },
+      { id: 'contactName',    label: 'Customer Contact Name',  type: 'text',  required: true },
+      { id: 'contactEmail',   label: 'Customer Contact Email', type: 'email', required: true },
+      { id: 'targetStartDate',label: 'Target Start Date',      type: 'date',  required: true },
+    ]},
+  { id: 's2', num: 2, title: 'Product Identity & Configuration', scope: 'product',
+    desc: 'What this product is and how it packs out. One product = one BOM.',
+    fields: [
+      { id: 'itemName',          label: 'Project / Item Name',   type: 'text', required: true, helper: 'e.g. SOJO Tropical 4flv-12PK' },
+      { id: 'customerItemNumber',label: 'Customer Item Number',  type: 'text', required: true, helper: 'Your internal SKU' },
+      { id: 'formatType',        label: 'Format Type',           type: 'select', required: true, options: ['Tray','Carton','Shrink Only','Tray + Shrink','Other'] },
+      { id: 'finishedPackFormat',label: 'Finished Pack Format',  type: 'text', required: true, helper: 'e.g. 2X12-24PK, 4X6-24PK' },
+      { id: 'containerSize',     label: 'Container Size',        type: 'text', required: true, helper: 'e.g. 12oz, 16oz, 750ml' },
+      { id: 'containerType',     label: 'Container Type',        type: 'select', required: true, options: ['Can','Bottle','Carton','Pouch','Other'] },
+      { id: 'containerSpec',     label: 'Container Spec',        type: 'text', required: true, helper: 'e.g. Sleek, Standard, Slim' },
+      { id: 'numFlavors',        label: 'Number of Flavors',     type: 'number', required: true },
+      { id: 'inboundCaseCount',  label: 'Inbound Case Count',    type: 'number', required: true, helper: 'Units per inbound WIP case' },
+      { id: 'casesPerPallet',    label: 'Cases per Pallet',      type: 'number', required: true, helper: 'Finished good cases per outbound pallet' },
+      { id: 'palletType',        label: 'Pallet Type',           type: 'select', required: true, options: ['GMA Whitewood','Plastic','CHEP','Other'] },
+      { id: 'masterCaseShrink',  label: 'Does the master case require shrink?', type: 'select', required: true, options: ['Yes','No'] },
+    ]},
+  { id: 's3', num: 3, title: 'Quality & Compliance', scope: 'product',
+    desc: 'Allergens, certifications, shelf life, and anything regulatory.',
+    fields: [
+      { id: 'allergensPresent', label: 'Allergens present?', type: 'select', required: true, options: ['Yes','No'] },
+      { id: 'allergenList',     label: 'Which allergens?',   type: 'multiselect', options: ['Dairy','Gluten','Soy','Nuts','Eggs','Hemp','Other'], showIf: { field: 'allergensPresent', equals: 'Yes' } },
+      { id: 'organic',          label: 'Certified organic?', type: 'select', required: true, options: ['Yes','No'] },
+      { id: 'regulatory',       label: 'Regulatory / food safety considerations?', type: 'select', required: true, options: ['Yes','No'] },
+      { id: 'regulatoryDesc',   label: 'Describe the considerations', type: 'textarea', showIf: { field: 'regulatory', equals: 'Yes' } },
+      { id: 'shelfLife',        label: 'Product shelf life', type: 'text', required: true, helper: 'e.g. 12 months, or NA' },
+      { id: 'minShipShelfLife', label: 'Minimum shipping shelf life', type: 'text', required: true },
+      { id: 'flavorOrientation',     label: 'Specific flavor orientation required in pack?', type: 'select', options: ['Yes','No'] },
+      { id: 'flavorOrientationDesc', label: 'Describe the orientation', type: 'text', showIf: { field: 'flavorOrientation', equals: 'Yes' } },
+    ]},
+  { id: 's4', num: 4, title: 'Lot Code Requirements', scope: 'product',
+    desc: 'How lot and date codes should read on this product.',
+    fields: [
+      { id: 'lotCodeFormat',  label: 'Lot Code Format', type: 'select', required: true, options: ['MMDDYY (Sojo Standard)','YYMMDD','MMDDYYYY','Custom'] },
+      { id: 'lotCodeCustom',  label: 'Custom format + reasoning', type: 'text', showIf: { field: 'lotCodeFormat', equals: 'Custom' } },
+      { id: 'printedDateStandard', label: 'Printed date code: use Sojo Standard?', type: 'select', required: true, options: ['Yes','No'], helper: 'Sojo Standard — Line 1: Best By MMDDYY · Line 2: Sojo Line ID & timestamp of repack' },
+      { id: 'printedDateCustom',   label: 'Describe your printed date code', type: 'textarea', showIf: { field: 'printedDateStandard', equals: 'No' } },
+      { id: 'dateCodeLocation', label: 'Date code location', type: 'select', required: true, options: ['Top of Carton','Bottom of Carton','Side of Carton','Top of Tray','Other'] },
+    ]},
+  { id: 's5', num: 5, title: 'Stack Height Requirements', scope: 'product',
+    desc: 'Sojo Standard is 3 high for WIP, 2–3 high for packaging and finished goods. If below standard, please explain.',
+    fields: [
+      { id: 'fgStackHeight',   label: 'Finished good max stack height',     type: 'select', required: true, options: ['1','2','3'], helper: 'Pallets high' },
+      { id: 'fgStackReason',   label: 'Reasoning for below-standard height', type: 'text', showIf: { field: 'fgStackHeight', equalsAny: ['1','2'] } },
+      { id: 'wipStackHeight',  label: 'WIP / raw material max stack height', type: 'select', required: true, options: ['1','2','3'] },
+      { id: 'wipStackReason',  label: 'Reasoning for below-standard height', type: 'text', showIf: { field: 'wipStackHeight', equalsAny: ['1','2'] } },
+      { id: 'pkgStackHeight',  label: 'Packaging material max stack height', type: 'select', required: true, options: ['1','2','3'] },
+    ]},
+  { id: 's6', num: 6, title: 'Outbound & Load Requirements', scope: 'product',
+    desc: 'How finished pallets ship out the door.',
+    fields: [
+      { id: 'palletPatternStandard', label: "Use Sojo's standard pallet pattern?", type: 'select', required: true, options: ['Yes','No'] },
+      { id: 'palletPatternDesc', label: 'Describe your pallet pattern', type: 'text', showIf: { field: 'palletPatternStandard', equals: 'No' } },
+      { id: 'palletPatternFile', label: 'Attach pallet pattern image',  type: 'file', showIf: { field: 'palletPatternStandard', equals: 'No' } },
+      { id: 'stretchWrapStandard', label: 'Stretch wrap to Sojo Standard (14–17 lbs)?', type: 'select', required: true, options: ['Yes','No'] },
+      { id: 'stretchWrapRecipe',   label: 'Custom stretch wrap recipe', type: 'textarea', showIf: { field: 'stretchWrapStandard', equals: 'No' } },
+      { id: 'slipsheetsRequired', label: 'Slipsheets required?', type: 'select', required: true, options: ['Yes','No'] },
+      { id: 'slipsheetLayers',    label: 'Which layers?', type: 'text', showIf: { field: 'slipsheetsRequired', equals: 'Yes' }, helper: 'e.g. one dust cover on top, one on layer 2' },
+      { id: 'cornerboardsRequired', label: 'Cornerboards required?', type: 'select', options: ['Yes','No'] },
+      { id: 'cornerboardHeight',    label: 'Cornerboard height', type: 'select', options: ['48in','60in','72in','Custom'], showIf: { field: 'cornerboardsRequired', equals: 'Yes' } },
+      { id: 'loadBars',   label: 'Load bars required?',   type: 'select', options: ['Yes','No'] },
+      { id: 'loadStraps', label: 'Load straps required?', type: 'select', options: ['Yes','No'] },
+      { id: 'airbagReqs', label: 'Airbag requirements',   type: 'text', helper: 'e.g. 3 airbags at beginning, middle, end of trailer. Blank if none.' },
+      { id: 'loadNotes',  label: 'Additional load securement notes', type: 'textarea' },
+      { id: 'loadNote',   type: 'note', label: 'Additional materials must be provided by the customer or a PO submitted to Sojo to source on your behalf.' },
+    ]},
+  { id: 's7', num: 7, title: 'Sticker Requirements', scope: 'product',
+    desc: 'Case-level stickers and labels applied during the run.',
+    fields: [
+      { id: 'stickersRequired', label: 'Stickers/labels required at case level?', type: 'select', options: ['Yes','No'] },
+      { id: 'stickerSize',      label: 'Sticker size',        type: 'select', options: ['2x2','2x4','4x4','Custom'], showIf: { field: 'stickersRequired', equals: 'Yes' } },
+      { id: 'stickerPlacement', label: 'Placement',           type: 'text',   showIf: { field: 'stickersRequired', equals: 'Yes' } },
+      { id: 'stickersPerCase',  label: 'Number per case',     type: 'number', showIf: { field: 'stickersRequired', equals: 'Yes' } },
+      { id: 'stickerArtwork',   label: 'Attach sticker artwork', type: 'file', showIf: { field: 'stickersRequired', equals: 'Yes' } },
+    ]},
+  { id: 's8', num: 8, title: 'Raw Materials & Packaging', scope: 'product', type: 'bom',
+    desc: "List each component in this product's Bill of Materials. One row per material. All item setups are per 1 BOM.",
+    fields: [
+      { id: 'wipSupplier', label: 'WIP Supplier',       type: 'select', required: true, options: 'suppliers' },
+      { id: 'pkgSupplier', label: 'Packaging Supplier', type: 'select', required: true, options: 'suppliers' },
+    ]},
+  { id: 's9', num: 9, title: 'Artwork & Dielines', scope: 'product',
+    desc: 'Everything our engineering team needs to spec the pack.',
+    fields: [
+      { id: 'dielinesProvided', label: 'Provide packaging dielines?', type: 'select', required: true, options: ['Yes','No'] },
+      { id: 'dielineFiles',     label: 'Attach dieline files with measurements', type: 'file', showIf: { field: 'dielinesProvided', equals: 'Yes' } },
+      { id: 'dielineNote',      type: 'note', label: 'Sojo will need dielines before production — your CSM will follow up.', showIf: { field: 'dielinesProvided', equals: 'No' } },
+      { id: 'artworkProvided',  label: 'Provide artwork files?', type: 'select', required: true, options: ['Yes','No'] },
+      { id: 'artworkFiles',     label: 'Attach artwork files', type: 'file', showIf: { field: 'artworkProvided', equals: 'Yes' } },
+      { id: 'complianceArtwork',label: 'Compliance requirements on artwork', type: 'textarea', helper: 'Allergens, organic cert, regulatory text' },
+    ]},
+];
+
+/* Repeating Section 8 component rows — one row per BOM material */
+const BOM_ROW_FIELDS = [
+  { id: 'materialType', label: 'Material Type', type: 'select', required: true, options: ['WIP / Raw Material','Packaging Material','Label','Sticker','Other'] },
+  { id: 'materialDesc', label: 'Material Description', type: 'text', required: true, helper: 'e.g. SOJO Tropical Punch 12oz Sleek' },
+  { id: 'flavor',       label: 'Flavor', type: 'text', showIf: { field: 'materialType', equals: 'WIP / Raw Material' } },
+  { id: 'count',        label: 'Count (CT)', type: 'text', helper: 'e.g. 12CT' },
+  { id: 'format',       label: 'Format', type: 'select', options: ['Loose','Shrunk','Other'] },
+  { id: 'custItemNum',  label: 'Customer Item Number', type: 'text' },
+  { id: 'bomQty',       label: 'BOM Qty per finished case', type: 'number', required: true },
+  { id: 'rowLotCode',   label: 'Lot Code Format', type: 'select', options: ['MMDDYY (Sojo Standard)','YYMMDD','Custom'] },
+  { id: 'casesPerInboundPallet', label: 'Cases per inbound pallet', type: 'number' },
+  { id: 'inboundPalletType', label: 'Inbound Pallet Type', type: 'select', options: ['GMA Whitewood','Plastic','CHEP','Other'] },
+  { id: 'supplier',      label: 'Supplier', type: 'select', options: 'suppliers' },
+  { id: 'supplierOther', label: 'Specify supplier', type: 'text', showIf: { field: 'supplier', equals: 'Other (specify)' } },
+];
+
+/* ── NetSuite destination map — { record, section, fieldName } ──────────────
+   record keys match FIELDS_DATA / Source Map nodes. The Internal Review tab
+   live-checks each destination against the Source Map.                      */
+const INTAKE_FIELD_MAP = {
+  customerName:        { record: 'blueprint', section: 'Customer Specific Information', fieldName: 'Customer Name' },
+  contactName:         { record: 'blueprint', section: 'Customer Specific Information', fieldName: 'Link to Customer Record' },
+  contactEmail:        { record: 'blueprint', section: 'Customer Specific Information', fieldName: 'Link to Customer Record' },
+  targetStartDate:     { record: 'variation', section: 'Pricing Summary', fieldName: 'Start Date' },
+  itemName:            { record: 'item', section: 'Primary Information', fieldName: 'Display Name / Code' },
+  customerItemNumber:  { record: 'item', section: 'Primary Information', fieldName: 'Customer Item #' },
+  formatType:          { record: 'variation', section: 'Pack Details', fieldName: 'Format Type' },
+  finishedPackFormat:  { record: 'variation', section: 'Pack Details', fieldName: 'Finished Pack Format' },
+  containerSize:       { record: 'blueprint', section: 'Item Specific Information', fieldName: 'Container Size' },
+  containerType:       { record: 'blueprint', section: 'Item Specific Information', fieldName: 'Container Type' },
+  containerSpec:       { record: 'blueprint', section: 'Item Specific Information', fieldName: 'Container Spec' },
+  numFlavors:          { record: 'blueprint', section: 'Item Specific Information', fieldName: '# of Flavors' },
+  inboundCaseCount:    { record: 'variation', section: 'Pack Details', fieldName: 'Touch 1: Inbound Case' },
+  casesPerPallet:      { record: 'variation', section: 'Pack Details', fieldName: 'Finished Good Cases per Pallet' },
+  palletType:          { record: 'item', section: 'SOJO Details', fieldName: 'Pallet Type' },
+  masterCaseShrink:    { record: 'variation', section: 'Pack Details', fieldName: 'Finished Pack Format' },
+  allergensPresent:    { record: 'blueprint', section: 'Quality', fieldName: 'Allergens' },
+  allergenList:        { record: 'blueprint', section: 'Quality', fieldName: 'Allergens' },
+  organic:             { record: 'blueprint', section: 'Quality', fieldName: 'Organic' },
+  regulatory:          { record: 'blueprint', section: 'Quality', fieldName: 'All quality fields' },
+  shelfLife:           { record: 'blueprint', section: 'Pallet & Stack Specifications', fieldName: 'WIP Shelf Life Days' },
+  minShipShelfLife:    { record: 'blueprint', section: 'Pallet & Stack Specifications', fieldName: 'Finished Shelf Life Days' },
+  lotCodeFormat:       { record: 'blueprint', section: 'Item Specific Information', fieldName: 'Finished System Lot Code Format' },
+  printedDateStandard: { record: 'blueprint', section: 'Item Specific Information', fieldName: 'Lot 1: Placement / Format / Description' },
+  dateCodeLocation:    { record: 'blueprint', section: 'Item Specific Information', fieldName: 'Lot 1: Placement / Format / Description' },
+  fgStackHeight:       { record: 'blueprint', section: 'Pallet & Stack Specifications', fieldName: 'Finished Good Max Stack Height' },
+  wipStackHeight:      { record: 'blueprint', section: 'Pallet & Stack Specifications', fieldName: 'WIP Max Stack Height' },
+  pkgStackHeight:      { record: 'blueprint', section: 'Pallet & Stack Specifications', fieldName: 'Packaging Max Warehouse Stack Height' },
+  palletPatternStandard:{ record: 'variation', section: 'Pack Details', fieldName: 'Pallet Pattern' },
+  stretchWrapStandard: { record: 'variation', section: 'Pack Details', fieldName: 'Shrink Film Specs' },
+  slipsheetsRequired:  { record: 'variation', section: 'Production Details', fieldName: 'Touch 1: Slipsheets' },
+  cornerboardsRequired:{ record: 'variation', section: 'Production Details', fieldName: 'Touch 1: Cornerboards' },
+  loadBars:            { record: 'blueprint', section: 'Outbound + Shipping Defaults', fieldName: 'Load Bars' },
+  loadStraps:          { record: 'blueprint', section: 'Outbound + Shipping Defaults', fieldName: 'Load Straps' },
+  airbagReqs:          { record: 'blueprint', section: 'Outbound + Shipping Defaults', fieldName: 'Airbag Qty' },
+  loadNotes:           { record: 'blueprint', section: 'Outbound + Shipping Defaults', fieldName: 'Outbound Load Details' },
+  stickersRequired:    { record: 'variation', section: 'Production Details', fieldName: 'Touch 1: Labels' },
+  bomRows:             { record: 'bomline', section: 'BOM Revision', fieldName: 'Component rows (Item · Quantity · Units)' },
+  wipSupplier:         { record: 'rmitem', section: 'SOJO Details', fieldName: 'Vendor Item #' },
+  pkgSupplier:         { record: 'pkgitem', section: 'SOJO Details', fieldName: 'Vendor Item #' },
+  dielinesProvided:    { record: 'variation', section: 'Pack Details', fieldName: 'Packaging Dieline' },
+  artworkProvided:     { record: 'rmitem', section: 'Primary Information', fieldName: 'Artwork Filed' },
+};
+
+/* Fields the customer can never provide — completed internally after intake */
+const INTERNAL_ONLY_FIELDS = [
+  'Variation: Machine Model / Possible Machine Models (Assets)',
+  'Variation: Machine Setpoint CPM + Output Case/Min (Throughput)',
+  'Variation: Headcount Assumptions (all roles)',
+  'Variation: Price per Case, Margins, Volume economics (Pricing Summary)',
+  'Variation: Location / Region assignment',
+  'Variation: Operations + Engineering Approval',
+  'Item: Department, Location, Units Type',
+  'BOM: Restrict to Assemblies linkage + Subsidiary',
+  'Customer Order: everything (created after Customer Approval)',
+];
+
+/* ── Complexity grading — internal only, never shown to the customer ────────
+   Tune weights here ("make custom lot codes weigh 3" → points: 3).
+   bucket: 'rm' = Raw Material Assessment · 'fg' = Finished Goods Assessment  */
+const COMPLEXITY_CONFIG = {
+  banding: { high: 75, moderate: 50 },   // >75% High · 50–74% Moderate · <50% Low
+  rules: [
+    { id: 'customLotCode',     label: 'Non-MMDDYY lot code',          points: 2, bucket: 'fg', when: { field: 'lotCodeFormat',        notEquals: 'MMDDYY (Sojo Standard)' } },
+    { id: 'belowStdFgStack',   label: 'Below-standard FG stack',      points: 2, bucket: 'fg', when: { field: 'fgStackHeight',        equalsAny: ['1','2'] } },
+    { id: 'belowStdWipStack',  label: 'Below-standard WIP stack',     points: 2, bucket: 'rm', when: { field: 'wipStackHeight',       equalsAny: ['1','2'] } },
+    { id: 'customStretchWrap', label: 'Custom stretch wrap recipe',   points: 3, bucket: 'fg', when: { field: 'stretchWrapStandard',  equals: 'No' } },
+    { id: 'stickers',          label: 'Sticker requirements',         points: 2, bucket: 'fg', when: { field: 'stickersRequired',     equals: 'Yes' } },
+    { id: 'flavorOrientation', label: 'Flavor orientation required',  points: 2, bucket: 'fg', when: { field: 'flavorOrientation',    equals: 'Yes' } },
+    { id: 'customPrintedDate', label: 'Custom printed date code',     points: 2, bucket: 'fg', when: { field: 'printedDateStandard',  equals: 'No' } },
+    { id: 'unknownSupplier',   label: 'Unproven / unknown supplier',  points: 2, bucket: 'rm', when: { special: 'unknownSupplier' } },
+    { id: 'customPalletPattern', label: 'Custom pallet pattern',      points: 2, bucket: 'fg', when: { field: 'palletPatternStandard', equals: 'No' } },
+  ],
+};
+
+</script>
 <style>
 /* ═══════════════════════════════════════════════════════════════════════════
    DESIGN TOKENS  (src/styles/tokens.css)
@@ -5130,6 +5347,122 @@ textarea.fe-input { min-height: 72px; resize: vertical; font-family: 'Manrope', 
 .fn-label.chg { color: #E8A858; } .fn-title.chg { color: #E8A858; }
 .conn-lbl { font-family: 'JetBrains Mono', monospace; font-size: 8.5px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); padding: 2px 0; }
 
+/* ─── IntakeForm.jsx — customer-facing POC. EVERY rule scoped under
+   .in-stage so the light theme cannot leak into the dark internal app. ── */
+.in-stage { background: #EEF1F5; color: #1A2330; min-height: calc(100vh - 112px); padding: 28px 20px 64px; font-family: 'Manrope', sans-serif; }
+.in-shell { max-width: 1060px; margin: 0 auto; }
+.in-header { background: #fff; border: 1px solid #DDE3EB; border-radius: 14px; padding: 18px 22px; margin-bottom: 14px; display: flex; flex-wrap: wrap; gap: 14px; align-items: center; }
+.in-logo { width: 38px; height: 38px; border-radius: 9px; background: #2A5FA5; color: #fff; font-weight: 800; font-size: 17px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.in-head-text { flex: 1; min-width: 200px; }
+.in-head-text h1 { font-size: 18px; font-weight: 800; color: #15233A; margin: 0; }
+.in-head-text p { font-size: 12px; color: #5A6A80; margin: 2px 0 0; }
+.in-head-right { display: flex; flex-direction: column; align-items: flex-end; gap: 5px; }
+.in-saved { font-size: 11px; color: #5A6A80; }
+.in-share { display: flex; gap: 6px; }
+.in-share button { background: #fff; border: 1px solid #C9D3E0; border-radius: 7px; padding: 6px 12px; font-family: 'Manrope', sans-serif; font-size: 11.5px; font-weight: 700; color: #2A5FA5; cursor: pointer; }
+.in-share button:hover { background: #EAF1FA; }
+.in-poc-note { font-size: 11px; color: #8A6A1A; background: #FFF7E0; border: 1px solid #F0DFA0; border-radius: 8px; padding: 7px 12px; margin-bottom: 14px; }
+/* overall progress */
+.in-progress-wrap { background: #fff; border: 1px solid #DDE3EB; border-radius: 12px; padding: 12px 18px; margin-bottom: 14px; }
+.in-progress-lbl { display: flex; justify-content: space-between; font-size: 11px; font-weight: 700; color: #5A6A80; margin-bottom: 6px; }
+.in-bar { height: 8px; background: #E2E8F1; border-radius: 4px; overflow: hidden; }
+.in-bar i { display: block; height: 100%; background: #2A5FA5; border-radius: 4px; transition: width 0.3s; }
+/* product pills */
+.in-products { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
+.in-prod-pill { display: flex; align-items: center; gap: 7px; background: #fff; border: 1.5px solid #C9D3E0; border-radius: 20px; padding: 7px 14px; font-size: 12px; font-weight: 700; color: #3A4A60; cursor: pointer; }
+.in-prod-pill.active { border-color: #2A5FA5; background: #EAF1FA; color: #2A5FA5; }
+.in-prod-pill .pct { font-size: 10px; font-weight: 800; color: #fff; background: #9AAAC0; border-radius: 9px; padding: 1px 7px; }
+.in-prod-pill.active .pct { background: #2A5FA5; }
+.in-prod-pill .px { color: #B05050; font-weight: 800; padding: 0 2px; }
+.in-prod-pill .pedit { color: #8A9AB5; }
+.in-prod-add { background: transparent; border: 1.5px dashed #9AAAC0; border-radius: 20px; padding: 7px 16px; font-family: 'Manrope', sans-serif; font-size: 12px; font-weight: 700; color: #2A5FA5; cursor: pointer; }
+.in-prod-add:hover { background: #EAF1FA; }
+/* layout: section nav + content */
+.in-body { display: grid; grid-template-columns: 230px 1fr; gap: 14px; align-items: start; }
+@media (max-width: 760px) { .in-body { grid-template-columns: 1fr; } }
+.in-secnav { background: #fff; border: 1px solid #DDE3EB; border-radius: 12px; padding: 8px; position: sticky; top: 170px; }
+.in-secnav button { display: flex; align-items: center; gap: 8px; width: 100%; text-align: left; background: transparent; border: none; border-radius: 8px; padding: 9px 10px; font-family: 'Manrope', sans-serif; font-size: 12px; font-weight: 600; color: #3A4A60; cursor: pointer; }
+.in-secnav button:hover { background: #F0F4F9; }
+.in-secnav button.active { background: #EAF1FA; color: #2A5FA5; font-weight: 800; }
+.in-secnav .chk { width: 16px; flex-shrink: 0; font-size: 11px; color: #2AAA6A; text-align: center; }
+.in-secnav .chk.empty { color: #C0CAD8; }
+.in-card { background: #fff; border: 1px solid #DDE3EB; border-radius: 14px; padding: 22px 26px; }
+.in-sec-title { font-size: 17px; font-weight: 800; color: #15233A; margin-bottom: 4px; }
+.in-sec-desc { font-size: 12.5px; color: #5A6A80; margin-bottom: 18px; line-height: 1.55; }
+.in-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px 18px; }
+@media (max-width: 640px) { .in-grid { grid-template-columns: 1fr; } }
+.in-field { display: flex; flex-direction: column; gap: 4px; }
+.in-field.full { grid-column: 1 / -1; }
+.in-label { font-size: 12px; font-weight: 700; color: #2A3A52; }
+.in-label .req { color: #C04040; }
+.in-helper { font-size: 11px; color: #7A8AA0; }
+.in-input, .in-select, .in-textarea { width: 100%; background: #F7F9FC; border: 1px solid #C9D3E0; border-radius: 8px; padding: 9px 11px; font-family: 'Manrope', sans-serif; font-size: 13px; color: #1A2330; }
+.in-input:focus, .in-select:focus, .in-textarea:focus { outline: none; border-color: #2A5FA5; box-shadow: 0 0 0 3px rgba(42,95,165,0.12); background: #fff; }
+.in-textarea { min-height: 70px; resize: vertical; }
+.in-checks { display: flex; flex-wrap: wrap; gap: 8px; }
+.in-checks label { display: flex; align-items: center; gap: 6px; background: #F7F9FC; border: 1px solid #C9D3E0; border-radius: 16px; padding: 5px 12px; font-size: 12px; color: #2A3A52; cursor: pointer; }
+.in-checks input { accent-color: #2A5FA5; }
+.in-file { border: 1.5px dashed #9AAAC0; border-radius: 8px; padding: 12px; text-align: center; font-size: 12px; color: #5A6A80; background: #F7F9FC; cursor: pointer; }
+.in-file input { display: none; }
+.in-file .fname { color: #2A5FA5; font-weight: 700; }
+.in-note { grid-column: 1 / -1; font-size: 12px; color: #6A5A20; background: #FFF7E0; border: 1px solid #F0DFA0; border-radius: 8px; padding: 9px 12px; }
+.in-conditional { animation: in-fade 0.22s ease; }
+@keyframes in-fade { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
+/* BOM rows */
+.in-bom-row { border: 1px solid #DDE3EB; border-radius: 10px; padding: 14px; margin-bottom: 12px; background: #FAFBFD; position: relative; }
+.in-bom-row .rowhdr { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; font-size: 11px; font-weight: 800; color: #5A6A80; }
+.in-bom-row .rowdel { background: transparent; border: 1px solid #E0C9C9; color: #B05050; border-radius: 6px; padding: 3px 10px; font-size: 11px; font-weight: 700; cursor: pointer; }
+.in-addrow { background: #EAF1FA; border: 1.5px dashed #2A5FA5; color: #2A5FA5; border-radius: 8px; padding: 10px; width: 100%; font-family: 'Manrope', sans-serif; font-size: 12.5px; font-weight: 700; cursor: pointer; margin-bottom: 16px; }
+/* nav + warnings */
+.in-foot { display: flex; justify-content: space-between; margin-top: 20px; gap: 10px; }
+.in-btn { background: #2A5FA5; color: #fff; border: none; border-radius: 8px; padding: 11px 22px; font-family: 'Manrope', sans-serif; font-size: 13px; font-weight: 700; cursor: pointer; }
+.in-btn:hover { background: #234E88; }
+.in-btn.ghost { background: #fff; color: #2A5FA5; border: 1px solid #C9D3E0; }
+.in-btn:disabled { background: #B8C4D4; cursor: not-allowed; }
+.in-warn { background: #FDF0EC; border: 1px solid #ECC8BC; color: #A05030; border-radius: 8px; padding: 9px 12px; font-size: 12px; margin-bottom: 14px; }
+/* review & submit */
+.in-summary-sec { border-bottom: 1px solid #E5EAF1; padding: 10px 0; }
+.in-summary-sec h4 { font-size: 12px; font-weight: 800; color: #2A5FA5; margin: 0 0 6px; display: flex; justify-content: space-between; }
+.in-summary-sec h4 a { font-size: 11px; color: #B05050; cursor: pointer; text-decoration: underline; }
+.in-sum-row { display: flex; justify-content: space-between; gap: 14px; font-size: 12px; padding: 2.5px 0; }
+.in-sum-row .k { color: #5A6A80; }
+.in-sum-row .v { color: #1A2330; font-weight: 600; text-align: right; }
+.in-confirm { display: flex; gap: 9px; align-items: flex-start; margin: 16px 0; font-size: 12.5px; color: #2A3A52; }
+.in-confirm input { accent-color: #2A5FA5; margin-top: 2px; }
+.in-done { text-align: center; padding: 30px 16px; }
+.in-done .big { font-size: 40px; }
+.in-done h2 { color: #15233A; }
+.in-done p { color: #5A6A80; font-size: 13px; max-width: 520px; margin: 8px auto; line-height: 1.6; }
+
+/* ─── IntakeReview.jsx — internal, stays dark ───────────────────────────── */
+.ir-view { max-width: 1100px; margin: 0 auto; padding: 36px 28px 64px; }
+.ir-intro { text-align: center; margin-bottom: 26px; }
+.ir-intro .eyebrow { font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 700; letter-spacing: 0.2em; color: var(--muted); text-transform: uppercase; margin-bottom: 10px; }
+.ir-intro h1 { font-size: 26px; font-weight: 800; letter-spacing: -0.02em; }
+.ir-intro p { font-size: 13px; color: var(--muted); margin-top: 6px; }
+.ir-grade { display: inline-flex; align-items: center; gap: 10px; padding: 8px 18px; border-radius: 22px; border: 1.5px solid; font-weight: 800; font-size: 14px; margin: 8px 4px; }
+.ir-grade.low  { color: #4ADA8A; border-color: rgba(74,218,138,0.5); background: rgba(74,218,138,0.08); }
+.ir-grade.mod  { color: #E8C840; border-color: rgba(232,200,64,0.5); background: rgba(232,200,64,0.08); }
+.ir-grade.high { color: #FF7050; border-color: rgba(255,112,80,0.5); background: rgba(255,112,80,0.08); }
+.ir-cards { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin: 18px 0; }
+@media (max-width: 860px) { .ir-cards { grid-template-columns: 1fr; } }
+.ir-card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 16px 18px; }
+.ir-card h3 { font-size: 13px; font-weight: 800; margin: 0 0 10px; color: var(--text); }
+.ir-cov-bar { height: 10px; background: #15151C; border: 1px solid var(--border); border-radius: 5px; overflow: hidden; margin: 8px 0; }
+.ir-cov-bar i { display: block; height: 100%; background: var(--c-plan); }
+.ir-list { font-size: 12px; color: #C8C8D6; line-height: 1.7; }
+.ir-list li { margin-left: 16px; }
+.ir-table { border: 1px solid var(--border); border-radius: 12px; overflow: hidden; margin-top: 14px; }
+.ir-trow { display: grid; grid-template-columns: 1.1fr 1.3fr 1.4fr 30px; border-bottom: 1px solid var(--border); }
+.ir-trow:last-child { border-bottom: none; }
+.ir-tcell { padding: 8px 12px; font-size: 11.5px; border-right: 1px solid var(--border); }
+.ir-tcell:last-child { border-right: none; text-align: center; }
+.ir-thead .ir-tcell { font-family: 'JetBrains Mono', monospace; font-size: 9.5px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; background: #0A0A0E; color: var(--muted); }
+.ir-dest { font-family: 'JetBrains Mono', monospace; font-size: 10px; }
+.ir-prodsel { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin: 12px 0 4px; }
+.ir-prodsel button { background: transparent; border: 1px solid var(--border); border-radius: 16px; padding: 6px 14px; color: var(--muted); font-family: 'Manrope', sans-serif; font-size: 12px; font-weight: 700; cursor: pointer; }
+.ir-prodsel button.active { border-color: var(--c-plan); color: var(--c-plan); background: rgba(42,170,138,0.08); }
+
 .app-footer { text-align: center; padding: 24px 20px; background: var(--bg); border-top: 1px solid var(--border); font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--muted); letter-spacing: 0.08em; }
 </style>
 </head>
@@ -5174,6 +5507,9 @@ textarea.fe-input { min-height: 72px; resize: vertical; font-family: 'Manrope', 
   <button class="view-tab" data-main="next" onclick="switchView('next')">
     <span class="tab-icon">→</span> Next Steps <span class="tab-desc">The roadmap</span>
   </button>
+  <button class="view-tab" data-main="intake" onclick="switchView('intake')">
+    <span class="tab-icon">▤</span> Intake Form <span class="tab-desc">Customer POC</span>
+  </button>
 </nav>
 
 <!-- ═══ SUB-NAV: Blueprint Flow ═══ -->
@@ -5191,6 +5527,12 @@ textarea.fe-input { min-height: 72px; resize: vertical; font-family: 'Manrope', 
   <button class="sub-tab" data-view="map" onclick="switchView('map')">Source Map</button>
   <button class="sub-tab" data-view="lookup" onclick="switchView('lookup')">SOP Lookup</button>
   <button class="sub-tab" data-view="items" onclick="switchView('items')">Open Items</button>
+</div>
+
+<!-- ═══ SUB-NAV: Intake Form ═══ -->
+<div class="sub-nav" id="subnav-intake">
+  <button class="sub-tab" data-view="intake" onclick="switchView('intake')">Customer Form</button>
+  <button class="sub-tab" data-view="intakereview" onclick="switchView('intakereview')"><span class="st-ico" style="color:#2AAA8A">⚙</span>Internal Review</button>
 </div>
 
 <!-- ═══ CONTROL BAR ═══ -->
@@ -5299,6 +5641,12 @@ textarea.fe-input { min-height: 72px; resize: vertical; font-family: 'Manrope', 
 <!-- ═══ VIEW: NEXT STEPS ═══ -->
 <div class="view" id="view-next"><div class="doc-view" id="nextView"></div></div>
 
+<!-- ═══ VIEW: INTAKE FORM — customer-facing POC (light theme, scoped) ═══ -->
+<div class="view" id="view-intake"><div class="in-stage" id="intakeView"></div></div>
+
+<!-- ═══ VIEW: INTAKE INTERNAL REVIEW (dark, internal) ═══ -->
+<div class="view" id="view-intakereview"><div class="ir-view" id="intakeReviewView"></div></div>
+
 <!-- ═══ DETAIL PANEL ═══ -->
 <aside class="detail-panel" id="detailPanel">
   <button class="panel-close" id="panelClose">×</button>
@@ -5330,6 +5678,8 @@ const ROUTES = {
   lookup:  { main: 'map',  sub: 'lookup' },
   items:   { main: 'map',  sub: 'items' },
   next:    { main: 'next' },
+  intake:       { main: 'intake', sub: 'intake' },
+  intakereview: { main: 'intake', sub: 'intakereview' },
 };
 
 /* ╔═════════════════════════════════════════════════════════════════════════╗
@@ -5349,6 +5699,7 @@ function switchView(id) {
   // show the correct sub-nav row, hide the other
   document.getElementById('subnav-flow').classList.toggle('visible', route.main === 'flow');
   document.getElementById('subnav-map').classList.toggle('visible', route.main === 'map');
+  document.getElementById('subnav-intake').classList.toggle('visible', route.main === 'intake');
 
   // highlight the active SUB tab (if any)
   document.querySelectorAll('.sub-tab').forEach(t => t.classList.toggle('active', t.dataset.view === id));
@@ -5362,6 +5713,8 @@ function switchView(id) {
   if (id === 'price' && typeof pfReset === 'function') pfReset();
   if (id === 'flow' && typeof flowReset === 'function') flowReset();
   if (id === 'erd' && typeof setErdDir === 'function') setErdDir('off');
+  if (id === 'intake' && typeof inRender === 'function') inRender();
+  if (id === 'intakereview' && typeof buildIntakeReview === 'function') buildIntakeReview();
 }
 
 /* Clear all search/filter highlights so each view opens in a clean default state */
@@ -6922,6 +7275,426 @@ function buildStats() {
 }
 
 /* ╔═════════════════════════════════════════════════════════════════════════╗
+   ║  VIEW: INTAKE FORM  (views/IntakeForm.jsx) — PROOF OF CONCEPT           ║
+   ║  Customer-facing digital New Project Form. Renders entirely from        ║
+   ║  intake-data.js (INTAKE_SECTIONS / BOM_ROW_FIELDS / APPROVED_SUPPLIERS  ║
+   ║  / INTAKE_FIELD_MAP / COMPLEXITY_CONFIG). Light theme scoped to         ║
+   ║  .in-stage. POC: persistence = localStorage per project-id; files       ║
+   ║  store filename only; submit/email hooks are stubs.                     ║
+   ╚═════════════════════════════════════════════════════════════════════════╝ */
+let IN_STATE = null;
+let IR_PROD = 0;
+
+function inIsEmpty(v) { return v === undefined || v === null || v === '' || (Array.isArray(v) && v.length === 0); }
+function inVisible(f, answers) {
+  if (!f.showIf) return true;
+  const v = answers[f.showIf.field];
+  if (f.showIf.equals !== undefined) return v === f.showIf.equals;
+  if (f.showIf.equalsAny) return f.showIf.equalsAny.includes(v);
+  return true;
+}
+function inNewProduct(n) { return { name: 'Product ' + n, answers: {}, bom: [{}] }; }
+
+function inInit() {
+  const param = new URLSearchParams(location.search).get('intake');
+  let id = param || localStorage.getItem('bpIntakeCurrent');
+  if (!id) id = 'PRJ-' + Math.random().toString(36).slice(2, 8).toUpperCase();
+  localStorage.setItem('bpIntakeCurrent', id);
+  try { IN_STATE = JSON.parse(localStorage.getItem('bpIntake_' + id)); } catch (e) { IN_STATE = null; }
+  if (!IN_STATE) IN_STATE = { id, created: new Date().toISOString(), overview: {}, products: [inNewProduct(1)], active: 0, activeSection: 's1', confirmed: false, submitted: false, lastSaved: null };
+  IN_STATE.id = id;
+  setInterval(() => { const el = document.getElementById('inSaved'); if (el && IN_STATE.lastSaved) el.textContent = 'Last saved ' + Math.max(0, Math.round((Date.now() - IN_STATE.lastSaved) / 1000)) + 's ago'; }, 5000);
+  setInterval(inSave, 30000);  // spec: autosave every 30s (also saves on every change)
+}
+function inSave() {
+  if (!IN_STATE) return;
+  IN_STATE.lastSaved = Date.now();
+  try { localStorage.setItem('bpIntake_' + IN_STATE.id, JSON.stringify(IN_STATE)); } catch (e) {}
+  const el = document.getElementById('inSaved');
+  if (el) el.textContent = 'Last saved just now';
+}
+
+/* ── completion ── */
+function inSectionMissing(sec, prodIdx) {
+  const answers = sec.scope === 'project' ? IN_STATE.overview : IN_STATE.products[prodIdx].answers;
+  const missing = [];
+  if (sec.type === 'bom') {
+    const rows = IN_STATE.products[prodIdx].bom;
+    if (!rows.length) missing.push('At least one material row');
+    rows.forEach((r, i) => BOM_ROW_FIELDS.forEach(f => { if (f.required && inVisible(f, r) && inIsEmpty(r[f.id])) missing.push('Row ' + (i + 1) + ': ' + f.label); }));
+  }
+  sec.fields.forEach(f => { if (f.required && f.type !== 'note' && inVisible(f, answers) && inIsEmpty(answers[f.id])) missing.push(f.label); });
+  return missing;
+}
+function inSectionComplete(sec, prodIdx) { return inSectionMissing(sec, prodIdx).length === 0; }
+function inProductPct(pi) {
+  const secs = INTAKE_SECTIONS.filter(s => s.scope === 'product');
+  return Math.round(secs.filter(s => inSectionComplete(s, pi)).length / secs.length * 100);
+}
+function inOverallPct() {
+  const prodSecs = INTAKE_SECTIONS.filter(s => s.scope === 'product');
+  let done = inSectionComplete(INTAKE_SECTIONS[0], 0) ? 1 : 0, total = 1;
+  IN_STATE.products.forEach((p, pi) => { total += prodSecs.length; done += prodSecs.filter(s => inSectionComplete(s, pi)).length; });
+  return Math.round(done / total * 100);
+}
+function inAllComplete() {
+  if (!inSectionComplete(INTAKE_SECTIONS[0], 0)) return false;
+  return IN_STATE.products.every((p, pi) => INTAKE_SECTIONS.filter(s => s.scope === 'product').every(s => inSectionComplete(s, pi)));
+}
+
+/* ── complexity engine (internal only — never rendered in the customer form) ── */
+function gradeProduct(prod) {
+  const a = prod.answers;
+  const max = COMPLEXITY_CONFIG.rules.reduce((s, r) => s + r.points, 0);
+  let rm = 0, fg = 0; const hits = [];
+  COMPLEXITY_CONFIG.rules.forEach(r => {
+    let hit = false; const w = r.when;
+    if (w.special === 'unknownSupplier') {
+      hit = [a.wipSupplier, a.pkgSupplier].concat(prod.bom.map(x => x.supplier)).some(s => s === 'Other (specify)');
+    } else {
+      const v = a[w.field];
+      if (w.equals !== undefined) hit = v === w.equals;
+      else if (w.notEquals !== undefined) hit = !inIsEmpty(v) && v !== w.notEquals;
+      else if (w.equalsAny) hit = w.equalsAny.includes(v);
+    }
+    if (hit) { hits.push({ id: r.id, label: r.label, points: r.points, bucket: r.bucket }); if (r.bucket === 'rm') rm += r.points; else fg += r.points; }
+  });
+  const pct = Math.round((rm + fg) / max * 100);
+  const band = pct > COMPLEXITY_CONFIG.banding.high ? 'High' : pct >= COMPLEXITY_CONFIG.banding.moderate ? 'Moderate' : 'Low';
+  return { rawMaterialScore: rm, finishedGoodsScore: fg, total: rm + fg, max, pct, band, drivers: hits };
+}
+
+/* ── state setters ── */
+function inSet(scope, id, value, rerender) {
+  (scope === 'o' ? IN_STATE.overview : IN_STATE.products[IN_STATE.active].answers)[id] = value;
+  inSave();
+  if (rerender) inRender(); else inRenderProgress();
+}
+function inToggleMulti(scope, id, opt, checked) {
+  const a = scope === 'o' ? IN_STATE.overview : IN_STATE.products[IN_STATE.active].answers;
+  const arr = Array.isArray(a[id]) ? a[id] : [];
+  a[id] = checked ? arr.concat(opt) : arr.filter(x => x !== opt);
+  inSave(); inRenderProgress();
+}
+function inSetFile(scope, id, input) {
+  inSet(scope, id, input.files.length ? '📎 ' + input.files[0].name : '', true);
+}
+function inSetBom(ri, id, value, rerender) {
+  IN_STATE.products[IN_STATE.active].bom[ri][id] = value;
+  inSave();
+  if (rerender) inRender(); else inRenderProgress();
+}
+function inAddBomRow() { IN_STATE.products[IN_STATE.active].bom.push({}); inSave(); inRender(); }
+function inDelBomRow(ri) { IN_STATE.products[IN_STATE.active].bom.splice(ri, 1); inSave(); inRender(); }
+
+/* ── products ── */
+function inAddProduct() {
+  IN_STATE.products.push(inNewProduct(IN_STATE.products.length + 1));
+  IN_STATE.active = IN_STATE.products.length - 1;
+  IN_STATE.activeSection = 's2';
+  inSave(); inRender();
+}
+function inSelProduct(pi) {
+  IN_STATE.active = pi;
+  if (INTAKE_SECTIONS.find(s => s.id === IN_STATE.activeSection)?.scope === 'project') IN_STATE.activeSection = 's2';
+  inSave(); inRender();
+}
+function inRenameProduct(pi) {
+  const name = prompt('Product name:', IN_STATE.products[pi].name);
+  if (name && name.trim()) { IN_STATE.products[pi].name = name.trim(); inSave(); inRender(); }
+}
+function inDelProduct(pi) {
+  if (IN_STATE.products.length === 1) { feToast('⚠ At least one product is required'); return; }
+  if (!confirm('Remove ' + IN_STATE.products[pi].name + '? Its answers will be deleted.')) return;
+  IN_STATE.products.splice(pi, 1);
+  IN_STATE.active = Math.min(IN_STATE.active, IN_STATE.products.length - 1);
+  inSave(); inRender();
+}
+
+/* ── navigation (soft validation: warn, never block) ── */
+function inGoSection(secId) {
+  const cur = INTAKE_SECTIONS.find(s => s.id === IN_STATE.activeSection);
+  if (cur) {
+    const missing = inSectionMissing(cur, IN_STATE.active);
+    if (missing.length) feToast('⚠ ' + missing.length + ' required field' + (missing.length === 1 ? '' : 's') + ' incomplete in "' + cur.title + '" — you can come back anytime');
+  }
+  IN_STATE.activeSection = secId;
+  inSave(); inRender();
+  document.getElementById('intakeView').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+function inJump(pi, secId) { IN_STATE.active = pi; IN_STATE.activeSection = secId; inSave(); inRender(); }
+
+/* ── share / project links (POC: localStorage-backed) ── */
+function inLink() { return location.origin + location.pathname + '?intake=' + IN_STATE.id; }
+function inCopyLink() { try { navigator.clipboard.writeText(inLink()); feToast('✓ Link copied — ' + IN_STATE.id); } catch (e) { prompt('Copy this link:', inLink()); } }
+function inMailto() {
+  const body = "You've been invited to complete a Sojo Industries project intake form. Use your unique link below — your progress saves automatically and you can return anytime:%0D%0A%0D%0A" + encodeURIComponent(inLink());
+  window.open('mailto:?subject=' + encodeURIComponent('Sojo Industries — Project Intake Form') + '&body=' + body);
+}
+function inNewProject() {
+  if (!confirm('Start a fresh intake with a new project ID?')) return;
+  const id = 'PRJ-' + Math.random().toString(36).slice(2, 8).toUpperCase();
+  localStorage.setItem('bpIntakeCurrent', id);
+  IN_STATE = { id, created: new Date().toISOString(), overview: {}, products: [inNewProduct(1)], active: 0, activeSection: 's1', confirmed: false, submitted: false, lastSaved: null };
+  inSave(); inRender();
+}
+
+/* ── payload + submit ── */
+function inBuildPayload() {
+  return {
+    projectId: IN_STATE.id,
+    submittedAt: new Date().toISOString(),
+    overview: Object.assign({}, IN_STATE.overview),
+    products: IN_STATE.products.map(p => ({
+      name: p.name,
+      answers: Object.assign({}, p.answers),
+      bomComponents: p.bom.map(r => Object.assign({}, r)),
+      complexity: gradeProduct(p),
+      fieldMappings: Object.keys(INTAKE_FIELD_MAP).map(k => {
+        const m = INTAKE_FIELD_MAP[k];
+        const v = IN_STATE.overview[k] !== undefined ? IN_STATE.overview[k] : (k === 'bomRows' ? p.bom : p.answers[k]);
+        return { formField: k, value: v === undefined ? null : v, record: m.record, section: m.section, fieldName: m.fieldName };
+      }),
+    })),
+    stubs: { customerConfirmationEmail: 'NOT SENT — wire to backend', internalTeamNotification: 'NOT SENT — wire to backend' },
+  };
+}
+function inExportPayload() {
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([JSON.stringify(inBuildPayload(), null, 2)], { type: 'application/json' }));
+  a.download = 'intake-' + IN_STATE.id + '.json';
+  document.body.appendChild(a); a.click(); a.remove();
+  feToast('✓ Payload exported');
+}
+function inSubmit() {
+  if (!inAllComplete() || !IN_STATE.confirmed) return;
+  IN_STATE.submitted = true;
+  inSave(); inRender();
+}
+
+/* ── field renderers ── */
+function inEsc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;'); }
+function inOpts(f) { return f.options === 'suppliers' ? APPROVED_SUPPLIERS : (f.options || []); }
+function inFieldHTML(f, answers, setFn) {
+  if (!inVisible(f, answers)) return '';
+  const v = answers[f.id];
+  const cond = f.showIf ? ' in-conditional' : '';
+  const full = (f.type === 'textarea' || f.type === 'multiselect' || f.type === 'note' || f.type === 'file') ? ' full' : '';
+  if (f.type === 'note') return `<div class="in-note${cond}">${f.label}</div>`;
+  const label = `<label class="in-label">${f.label}${f.required ? ' <span class="req">*</span>' : ''}</label>` + (f.helper ? `<div class="in-helper">${f.helper}</div>` : '');
+  let input = '';
+  if (f.type === 'select') {
+    input = `<select class="in-select" onchange="${setFn}('${f.id}',this.value,true)"><option value="">Select an option</option>` +
+      inOpts(f).map(o => `<option${v === o ? ' selected' : ''}>${o}</option>`).join('') + '</select>';
+  } else if (f.type === 'multiselect') {
+    input = `<div class="in-checks">` + inOpts(f).map(o =>
+      `<label><input type="checkbox"${Array.isArray(v) && v.includes(o) ? ' checked' : ''} onchange="inToggleMulti('${setFn === 'inSetO' ? 'o' : 'p'}','${f.id}','${o}',this.checked)">${o}</label>`).join('') + '</div>';
+  } else if (f.type === 'textarea') {
+    input = `<textarea class="in-textarea" onchange="${setFn}('${f.id}',this.value)">${inEsc(v)}</textarea>`;
+  } else if (f.type === 'file') {
+    input = `<label class="in-file">${v ? `<span class="fname">${inEsc(v)}</span> — click to replace` : '📎 Click to attach a file (POC: filename only is stored)'}<input type="file" onchange="inSetFile('${setFn === 'inSetO' ? 'o' : 'p'}','${f.id}',this)"></label>`;
+  } else {
+    input = `<input class="in-input" type="${f.type}" value="${inEsc(v)}" onchange="${setFn}('${f.id}',this.value)">`;
+  }
+  return `<div class="in-field${full}${cond}">${label}${input}</div>`;
+}
+function inSetO(id, value, rr) { inSet('o', id, value, rr); }
+function inSetP(id, value, rr) { inSet('p', id, value, rr); }
+
+function inBomRowHTML(r, ri) {
+  const cells = BOM_ROW_FIELDS.map(f => {
+    if (!inVisible(f, r)) return '';
+    const v = r[f.id];
+    const label = `<label class="in-label">${f.label}${f.required ? ' <span class="req">*</span>' : ''}</label>` + (f.helper ? `<div class="in-helper">${f.helper}</div>` : '');
+    let input;
+    if (f.type === 'select') input = `<select class="in-select" onchange="inSetBom(${ri},'${f.id}',this.value,true)"><option value="">Select an option</option>` + inOpts(f).map(o => `<option${v === o ? ' selected' : ''}>${o}</option>`).join('') + '</select>';
+    else input = `<input class="in-input" type="${f.type}" value="${inEsc(v)}" onchange="inSetBom(${ri},'${f.id}',this.value)">`;
+    return `<div class="in-field${f.showIf ? ' in-conditional' : ''}">${label}${input}</div>`;
+  }).join('');
+  return `<div class="in-bom-row"><div class="rowhdr"><span>MATERIAL ${ri + 1}</span><button class="rowdel" type="button" onclick="inDelBomRow(${ri})">Remove row</button></div><div class="in-grid">${cells}</div></div>`;
+}
+
+/* ── main render ── */
+function buildIntakeView() { inRender(); }
+function inRenderProgress() {
+  const o = document.getElementById('inOverallBar'); if (o) { o.style.width = inOverallPct() + '%'; }
+  const ol = document.getElementById('inOverallLbl'); if (ol) ol.textContent = inOverallPct() + '% complete';
+  document.querySelectorAll('.in-prod-pill .pct').forEach((el, i) => { if (IN_STATE.products[i]) el.textContent = inProductPct(i) + '%'; });
+}
+function inRender() {
+  const wrap = document.getElementById('intakeView');
+  if (!wrap) return;
+  if (IN_STATE.submitted) {
+    wrap.innerHTML = `<div class="in-shell"><div class="in-card in-done">
+      <div class="big">✅</div><h2>Intake received — thank you!</h2>
+      <p>Project <strong>${IN_STATE.id}</strong> with ${IN_STATE.products.length} product${IN_STATE.products.length === 1 ? '' : 's'} has been recorded. Your Sojo CSM will review the submission and follow up on anything that needs clarification.</p>
+      <p style="font-size:11px;color:#8A9AB5">POC stubs: customer confirmation email + internal team notification are logged in the payload, ready to wire to a backend.</p>
+      <button class="in-btn" type="button" onclick="inExportPayload()">⬇ Export JSON payload</button>
+      <button class="in-btn ghost" type="button" style="margin-left:8px" onclick="IN_STATE.submitted=false;IN_STATE.confirmed=false;inSave();inRender()">Reopen form</button>
+    </div></div>`;
+    return;
+  }
+  const prodSecs = INTAKE_SECTIONS.filter(s => s.scope === 'product');
+  const pills = IN_STATE.products.map((p, pi) =>
+    `<div class="in-prod-pill${pi === IN_STATE.active ? ' active' : ''}" onclick="inSelProduct(${pi})">${inEsc(p.name)} <span class="pct">${inProductPct(pi)}%</span>` +
+    `<span class="pedit" title="Rename" onclick="event.stopPropagation();inRenameProduct(${pi})">✎</span>` +
+    `<span class="px" title="Remove" onclick="event.stopPropagation();inDelProduct(${pi})">✕</span></div>`).join('') +
+    `<button class="in-prod-add" type="button" onclick="inAddProduct()">＋ Add Another Product</button>`;
+  const navBtns = [INTAKE_SECTIONS[0]].concat(prodSecs).map(s =>
+    `<button class="${IN_STATE.activeSection === s.id ? 'active' : ''}" onclick="inGoSection('${s.id}')"><span class="chk${inSectionComplete(s, IN_STATE.active) ? '' : ' empty'}">${inSectionComplete(s, IN_STATE.active) ? '✓' : '○'}</span>${s.num}. ${s.title}</button>`).join('') +
+    `<button class="${IN_STATE.activeSection === 'review' ? 'active' : ''}" onclick="inGoSection('review')"><span class="chk${inAllComplete() ? '' : ' empty'}">${inAllComplete() ? '✓' : '○'}</span>10. Review &amp; Submit</button>`;
+  let content = '';
+  if (IN_STATE.activeSection === 'review') {
+    content = inReviewSectionHTML();
+  } else {
+    const sec = INTAKE_SECTIONS.find(s => s.id === IN_STATE.activeSection) || INTAKE_SECTIONS[0];
+    const isProj = sec.scope === 'project';
+    const answers = isProj ? IN_STATE.overview : IN_STATE.products[IN_STATE.active].answers;
+    const setFn = isProj ? 'inSetO' : 'inSetP';
+    let inner = '';
+    if (sec.type === 'bom') {
+      inner = IN_STATE.products[IN_STATE.active].bom.map((r, ri) => inBomRowHTML(r, ri)).join('') +
+        `<button class="in-addrow" type="button" onclick="inAddBomRow()">＋ Add material row</button>` +
+        `<div class="in-grid">` + sec.fields.map(f => inFieldHTML(f, answers, setFn)).join('') + `</div>`;
+    } else {
+      inner = `<div class="in-grid">` + sec.fields.map(f => inFieldHTML(f, answers, setFn)).join('') + `</div>`;
+    }
+    const idx = ['s1'].concat(prodSecs.map(s => s.id)).concat(['review']);
+    const cur = idx.indexOf(sec.id);
+    content = `<div class="in-card">
+      <div class="in-sec-title">${sec.num}. ${sec.title}${isProj ? '' : ' <span style="font-size:12px;color:#7A8AA0;font-weight:600">· ' + inEsc(IN_STATE.products[IN_STATE.active].name) + '</span>'}</div>
+      <div class="in-sec-desc">${sec.desc}</div>
+      ${inner}
+      <div class="in-foot">
+        <button class="in-btn ghost" type="button" ${cur <= 0 ? 'disabled' : ''} onclick="inGoSection('${idx[Math.max(0, cur - 1)]}')">← Back</button>
+        <button class="in-btn" type="button" onclick="inGoSection('${idx[Math.min(idx.length - 1, cur + 1)]}')">Continue →</button>
+      </div>
+    </div>`;
+  }
+  wrap.innerHTML = `<div class="in-shell">
+    <div class="in-header">
+      <div class="in-logo">S</div>
+      <div class="in-head-text"><h1>Sojo Industries · New Project Intake</h1><p>Project ID: <strong>${IN_STATE.id}</strong> · your progress saves automatically</p></div>
+      <div class="in-head-right">
+        <div class="in-share">
+          <button type="button" onclick="inCopyLink()">🔗 Copy link</button>
+          <button type="button" onclick="inMailto()">✉ Email link</button>
+          <button type="button" onclick="inNewProject()">＋ New intake</button>
+        </div>
+        <div class="in-saved" id="inSaved">${IN_STATE.lastSaved ? 'Last saved recently' : 'Not saved yet'}</div>
+      </div>
+    </div>
+    <div class="in-poc-note">⚠ Proof of concept — answers save in this browser per project link. File uploads store the filename only. Backend transport (cross-device resume, file delivery, emails) is stubbed for later wiring.</div>
+    <div class="in-progress-wrap"><div class="in-progress-lbl"><span>Overall progress — all products</span><span id="inOverallLbl">${inOverallPct()}% complete</span></div><div class="in-bar"><i id="inOverallBar" style="width:${inOverallPct()}%"></i></div></div>
+    <div class="in-products">${pills}</div>
+    <div class="in-body"><div class="in-secnav">${navBtns}</div>${content}</div>
+  </div>`;
+}
+
+/* Section 10 — Review & Submit (covers all products) */
+function inReviewSectionHTML() {
+  const prodSecs = INTAKE_SECTIONS.filter(s => s.scope === 'product');
+  function secSummary(sec, answers, pi) {
+    const rows = sec.fields.filter(f => f.type !== 'note' && inVisible(f, answers) && !inIsEmpty(answers[f.id]))
+      .map(f => `<div class="in-sum-row"><span class="k">${f.label}</span><span class="v">${inEsc(Array.isArray(answers[f.id]) ? answers[f.id].join(', ') : answers[f.id])}</span></div>`).join('');
+    const missing = inSectionMissing(sec, pi);
+    const jump = missing.length ? `<a onclick="inJump(${pi},'${sec.id}')">${missing.length} missing — fix</a>` : '';
+    return `<div class="in-summary-sec"><h4>${sec.num}. ${sec.title}${jump ? ' ' + jump : ''}</h4>${rows || '<div class="in-sum-row"><span class="k">No answers yet</span></div>'}</div>`;
+  }
+  let html = `<div class="in-card"><div class="in-sec-title">10. Review &amp; Submit</div><div class="in-sec-desc">Check every product before submitting. Incomplete required fields are linked below.</div>`;
+  html += secSummary(INTAKE_SECTIONS[0], IN_STATE.overview, 0);
+  IN_STATE.products.forEach((p, pi) => {
+    html += `<div style="margin:16px 0 4px;font-size:13px;font-weight:800;color:#15233A">📦 ${inEsc(p.name)}</div>`;
+    prodSecs.forEach(sec => {
+      const answers = sec.type === 'bom' ? p.answers : p.answers;
+      if (sec.type === 'bom') {
+        const missing = inSectionMissing(sec, pi);
+        const rows = p.bom.map((r, ri) => `<div class="in-sum-row"><span class="k">Material ${ri + 1}</span><span class="v">${inEsc(r.materialDesc || '—')} · ${inEsc(r.materialType || '?')} · qty ${inEsc(r.bomQty || '?')}</span></div>`).join('');
+        html += `<div class="in-summary-sec"><h4>${sec.num}. ${sec.title}${missing.length ? ` <a onclick="inJump(${pi},'${sec.id}')">${missing.length} missing — fix</a>` : ''}</h4>${rows}</div>`;
+      } else {
+        const saveActive = IN_STATE.active; IN_STATE.active = pi;   // evaluate in product context
+        html += secSummary(sec, answers, pi);
+        IN_STATE.active = saveActive;
+      }
+    });
+  });
+  const ready = inAllComplete();
+  html += `<div class="in-confirm"><input type="checkbox" id="inConfirm" ${IN_STATE.confirmed ? 'checked' : ''} onchange="IN_STATE.confirmed=this.checked;inSave();inRender()"><label for="inConfirm">I confirm this information is accurate to the best of my knowledge</label></div>`;
+  html += `<button class="in-btn" type="button" ${ready && IN_STATE.confirmed ? '' : 'disabled'} onclick="inSubmit()">Submit intake${ready ? '' : ' — complete all products first'}</button></div>`;
+  return html;
+}
+
+/* ╔═════════════════════════════════════════════════════════════════════════╗
+   ║  VIEW: INTAKE INTERNAL REVIEW  (views/IntakeReview.jsx) — dark/internal ║
+   ║  Field-mapping dashboard + complexity grades. Destinations are LIVE-    ║
+   ║  checked against FIELDS_DATA so the intake map can't drift from the     ║
+   ║  Source Map.                                                            ║
+   ╚═════════════════════════════════════════════════════════════════════════╝ */
+function irDestOk(m) {
+  const d = FIELDS_DATA[m.record];
+  if (!d) return false;
+  return d.sections.some(s => s.label.toLowerCase().includes(m.section.toLowerCase()));
+}
+function irFieldLabel(k) {
+  for (const s of INTAKE_SECTIONS) { const f = s.fields.find(x => x.id === k); if (f) return f.label; }
+  if (k === 'bomRows') return 'BOM component rows (Section 8)';
+  return k;
+}
+function buildIntakeReview() {
+  const wrap = document.getElementById('intakeReviewView');
+  if (!IN_STATE) { wrap.innerHTML = '<div class="ir-intro"><h1>No intake in progress</h1></div>'; return; }
+  IR_PROD = Math.min(IR_PROD, IN_STATE.products.length - 1);
+  const p = IN_STATE.products[IR_PROD];
+  const g = gradeProduct(p);
+  const bandCls = g.band === 'High' ? 'high' : g.band === 'Moderate' ? 'mod' : 'low';
+  const mapped = Object.keys(INTAKE_FIELD_MAP);
+  const valueOf = k => k === 'bomRows' ? (p.bom.length && p.bom.some(r => !inIsEmpty(r.materialDesc)) ? p.bom.length + ' component row(s)' : '') :
+    (IN_STATE.overview[k] !== undefined ? IN_STATE.overview[k] : p.answers[k]);
+  const populated = mapped.filter(k => !inIsEmpty(valueOf(k)));
+  const prodSel = IN_STATE.products.map((pp, pi) => `<button class="${pi === IR_PROD ? 'active' : ''}" onclick="IR_PROD=${pi};buildIntakeReview()">${inEsc(pp.name)}</button>`).join('');
+  const tableRows = mapped.map(k => {
+    const m = INTAKE_FIELD_MAP[k];
+    const v = valueOf(k);
+    const ok = irDestOk(m);
+    return `<div class="ir-trow">
+      <div class="ir-tcell">${irFieldLabel(k)}</div>
+      <div class="ir-tcell" style="color:${inIsEmpty(v) ? 'var(--dim)' : '#DADAE6'}">${inIsEmpty(v) ? '— not provided —' : inEsc(Array.isArray(v) ? v.join(', ') : v)}</div>
+      <div class="ir-tcell ir-dest" style="color:${(SM_META[m.record] || {}).c || '#888'}">${(SM_META[m.record] || { t: m.record }).t} → ${m.section} → ${m.fieldName}</div>
+      <div class="ir-tcell" title="${ok ? 'Destination verified against the live Source Map' : 'Destination section not found in Source Map — check the mapping'}">${ok ? '✓' : '⚠'}</div>
+    </div>`;
+  }).join('');
+  wrap.innerHTML = `
+    <div class="ir-intro">
+      <div class="eyebrow">Intake Form · Internal Review — never shown to the customer</div>
+      <h1>Submission Review · ${IN_STATE.id}</h1>
+      <p>${IN_STATE.submitted ? '✅ Submitted' : '✍ In progress'} · ${IN_STATE.products.length} product(s) · destinations live-checked against the Source Map</p>
+      <div class="ir-prodsel">${prodSel}</div>
+      <div class="ir-grade ${bandCls}">Complexity: ${g.band} · ${g.pct}%</div>
+    </div>
+    <div class="ir-cards">
+      <div class="ir-card">
+        <h3>Coverage — ${inEsc(p.name)}</h3>
+        <div style="font-size:13px;color:#DADAE6">Customer populated <strong style="color:var(--c-plan)">${populated.length} of ${mapped.length}</strong> SOP-source fields</div>
+        <div class="ir-cov-bar"><i style="width:${Math.round(populated.length / mapped.length * 100)}%"></i></div>
+        <div style="font-size:11px;color:var(--muted)">Product completion ${inProductPct(IR_PROD)}% · overall ${inOverallPct()}%</div>
+      </div>
+      <div class="ir-card">
+        <h3>Complexity drivers — RM ${g.rawMaterialScore} pts · FG ${g.finishedGoodsScore} pts (${g.total}/${g.max})</h3>
+        <ul class="ir-list">${g.drivers.length ? g.drivers.map(d => `<li>${d.label} · +${d.points} (${d.bucket.toUpperCase()})</li>`).join('') : '<li>No deviations from Sojo standard — all defaults</li>'}</ul>
+      </div>
+      <div class="ir-card" style="grid-column:1/-1">
+        <h3>Requires internal completion — customers can never provide these</h3>
+        <ul class="ir-list">${INTERNAL_ONLY_FIELDS.map(f => `<li>${f}</li>`).join('')}</ul>
+      </div>
+    </div>
+    <div class="ir-table">
+      <div class="ir-trow ir-thead"><div class="ir-tcell">Form Field</div><div class="ir-tcell">Customer Answer</div><div class="ir-tcell">NetSuite Destination</div><div class="ir-tcell">✓</div></div>
+      ${tableRows}
+    </div>
+    <div style="text-align:center;margin-top:18px"><button class="panel-action" style="max-width:320px;display:inline-flex" onclick="inExportPayload()">⬇ Export JSON payload</button></div>`;
+}
+
+/* ╔═════════════════════════════════════════════════════════════════════════╗
    ║  INIT  (main.jsx)                                                       ║
    ╚═════════════════════════════════════════════════════════════════════════╝ */
 /* If a static copy saved edits to browser storage (no server), restore them —
@@ -6965,7 +7738,10 @@ renderOpenItems('all');
 document.getElementById('flagCountBadge').textContent = allOpenItems.filter(i => i.status === 'flag' || i.status === 'tbd').length;
 if (allOpenItems.filter(i => i.status === 'flag' || i.status === 'tbd').length === 0) document.getElementById('openItemsBtn').classList.add('zero');
 
-switchView('flow'); // start on Blueprint Flow with sub-nav visible + clean state
+inInit();  // intake form state (loads ?intake=<id> project if present)
+
+// A shared ?intake= link opens straight into the customer form
+switchView(new URLSearchParams(location.search).get('intake') ? 'intake' : 'flow');
 
 </script>
 </body>
