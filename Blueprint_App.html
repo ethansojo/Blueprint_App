@@ -5080,6 +5080,17 @@ textarea.fe-input { min-height: 72px; resize: vertical; font-family: 'Manrope', 
 .erd-frow span:first-child { color: #D2D2DE; }
 .erd-frow span:last-child { font-family: 'JetBrains Mono', monospace; font-size: 9px; font-weight: 700; white-space: nowrap; padding-top: 2px; }
 
+/* ─── Flow Diagram — presenter toggle (New vs Existing project) ─────────── */
+.flow-toggle { display: flex; width: 100%; max-width: 480px; margin: 0 auto 12px; border: 1px solid var(--border); border-radius: 10px; overflow: hidden; background: var(--surface); }
+.flow-toggle button { flex: 1; padding: 12px 18px; background: transparent; border: none; color: var(--muted); font-family: 'Manrope', sans-serif; font-size: 13.5px; font-weight: 700; cursor: pointer; transition: background 0.15s, color 0.15s; }
+.flow-toggle button:hover { color: var(--text); }
+.flow-toggle button.active[data-mode="new"] { background: rgba(212,168,48,0.14); color: #E8C040; box-shadow: inset 0 -2px 0 #D4A830; }
+.flow-toggle button.active[data-mode="existing"] { background: rgba(90,156,216,0.14); color: #92CCF0; box-shadow: inset 0 -2px 0 #5A9CD8; }
+.flow-mode-intro { font-size: 12.5px; color: var(--muted); text-align: center; max-width: 740px; margin: 0 auto 6px; line-height: 1.6; }
+.flow-mode-intro strong { color: var(--text); }
+.flow-kbd-hint { font-family: 'JetBrains Mono', monospace; font-size: 9.5px; color: var(--dim); text-align: center; margin-bottom: 16px; }
+.flow-inner { display: flex; flex-direction: column; align-items: center; width: 100%; transition: opacity 0.16s ease; }
+
 /* ─── Flow Diagram — dual entry paths + post-CO production layer ────────── */
 .flow-entry-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; width: 100%; }
 .flow-entry { border: 1.5px dashed; border-radius: 12px; padding: 12px 16px; background: rgba(255,255,255,0.02); cursor: pointer; transition: background 0.15s; }
@@ -5333,6 +5344,7 @@ function switchView(id) {
   clearHighlights();
   closePanel();
   if (id === 'price' && typeof pfReset === 'function') pfReset();
+  if (id === 'flow' && typeof flowReset === 'function') flowReset();
 }
 
 /* Clear all search/filter highlights so each view opens in a clean default state */
@@ -6171,8 +6183,53 @@ const CREATORS = {
   workorder:      'Planners',
   sop:            'System (automatic)',
 };
+/* Presenter toggle between the two project workflows. Default = 'new'
+   (per Ethan — the new-project story is the pitch). One path shows at a
+   time; ←/→ arrow keys switch while presenting. */
+let FLOW_MODE = 'new';   // 'new' | 'existing'
+
 function buildBlueprintFlow() {
   const container = document.getElementById('flowDiagram');
+  container.innerHTML = `
+    <div class="flow-toggle" id="flowToggle">
+      <button type="button" data-mode="new" onclick="setFlowMode('new')">🆕 New Project</button>
+      <button type="button" data-mode="existing" onclick="setFlowMode('existing')">♻ Existing Project</button>
+    </div>
+    <div class="flow-mode-intro" id="flowModeIntro"></div>
+    <div class="flow-kbd-hint">← → to switch paths while presenting</div>
+    <div class="flow-inner" id="flowInner"></div>`;
+  renderFlowDiagram();
+}
+
+function setFlowMode(mode) {
+  if (FLOW_MODE === mode) return;
+  FLOW_MODE = mode;
+  const inner = document.getElementById('flowInner');
+  inner.style.opacity = '0';
+  setTimeout(() => { renderFlowDiagram(); inner.style.opacity = '1'; }, 160);
+}
+
+function flowReset() {
+  FLOW_MODE = 'new';
+  if (document.getElementById('flowInner')) renderFlowDiagram();
+}
+
+/* Arrow keys switch paths while presenting — Flow Diagram view only */
+document.addEventListener('keydown', e => {
+  if (typeof currentView === 'undefined' || currentView !== 'flow') return;
+  const ae = document.activeElement;
+  if (ae && (ae.tagName === 'INPUT' || ae.tagName === 'TEXTAREA' || ae.tagName === 'SELECT')) return;
+  if (e.key === 'ArrowLeft')       { e.preventDefault(); setFlowMode('new'); }
+  else if (e.key === 'ArrowRight') { e.preventDefault(); setFlowMode('existing'); }
+});
+
+function renderFlowDiagram() {
+  document.querySelectorAll('#flowToggle button').forEach(b => b.classList.toggle('active', b.dataset.mode === FLOW_MODE));
+  document.getElementById('flowModeIntro').innerHTML = FLOW_MODE === 'new'
+    ? '<strong>New project:</strong> commercial development starts at the PC — price first, no Blueprint paperwork. A minimal Blueprint auto-creates behind it and <strong>auto-populates ⟲ from the Variation and Item</strong> as they are filled out.'
+    : '<strong>Existing project:</strong> the Blueprint already exists. Its fields <strong>auto-fill ↓ the new Variation, Item, RM Item, and Packaging records</strong> — consistent data, zero redundant entry.';
+  const container = document.getElementById('flowInner');
+  container.innerHTML = '';
   function node(id, cls, labelTxt, titleTxt, subTxt, whenTxt) {
     const el = document.createElement('div');
     el.className = `flow-node ${cls}`;
@@ -6195,46 +6252,38 @@ function buildBlueprintFlow() {
     return el;
   }
 
-  /* ── ENTRY LAYER — two ways into the chain ─────────────────────────────── */
-  const entryRow = document.createElement('div');
-  entryRow.className = 'flow-entry-row';
-  entryRow.innerHTML = `
-    <div class="flow-entry existing" onclick="openPanel('<div class=&quot;panel-eyebrow&quot; style=&quot;color:#5A9CD8&quot;>Entry Path</div><h2 class=&quot;panel-field-name&quot; style=&quot;color:#5A9CD8&quot;>Existing Project</h2><div class=&quot;panel-row&quot;><div class=&quot;panel-label&quot;>How it works</div><div class=&quot;panel-method&quot;>The Blueprint already exists for this customer/product. Evaluate what changed (see the Decision Tree) and create a new Variation / PC under it. The Blueprint stays stable — only the varying layer changes.</div></div>')">
-      <div class="fe-eyebrow">Start here · Existing project</div>
-      <div class="fe-title">♻ Change to an existing project</div>
-      <div class="fe-sub">The Blueprint already exists → evaluate what changed (Decision Tree) → create a new Variation / PC under it.</div>
-    </div>
-    <div class="flow-entry fresh" onclick="openPanel('<div class=&quot;panel-eyebrow&quot; style=&quot;color:#D4A830&quot;>Entry Path</div><h2 class=&quot;panel-field-name&quot; style=&quot;color:#D4A830&quot;>New Project</h2><div class=&quot;panel-row&quot;><div class=&quot;panel-label&quot;>How it works</div><div class=&quot;panel-method&quot;>Commercial development starts at the PC to get a price in front of the customer fast — no Blueprint paperwork first. The system auto-creates a minimal Blueprint behind it, and the Blueprint auto-populates as the chain fills in (fields roll up from the Variation, Item, RM Item, and Packaging records).</div></div>')">
-      <div class="fe-eyebrow">Start here · New project</div>
-      <div class="fe-title">🆕 Fresh project — price first</div>
-      <div class="fe-sub">Commercial dev starts at the PC → Blueprint auto-creates behind it ⟲ and auto-populates as records fill in.</div>
-    </div>`;
-  container.appendChild(entryRow);
-  container.appendChild(connector());
-
-  /* ── BLUEPRINT ⇄ VARIATION pair (two-way relationship) ─────────────────── */
-  const pair = document.createElement('div');
-  pair.className = 'flow-pair';
-  const bpNode = node('blueprint','bp','Blueprint','Blueprint','Customer-level config · Defined once per relationship · AUTO-POPULATES as the chain fills in ⟲','Existing path: already exists · New path: auto-created from the PC');
-  const varNode = node('variation','var','Variation / PC','Variation / PC','Pricing calculator + production configuration · NEW PROJECTS START HERE · Requires Ops + Engineering approval','Anything that changes price — or a brand-new project');
-  const mid = document.createElement('div');
-  mid.className = 'flow-pair-mid';
-  mid.innerHTML = `
-    <div class="lbl tobp">⟲ new: PC auto-creates + auto-populates blueprint</div>
-    <div class="arr">⇄</div>
-    <div class="lbl tovar">existing: blueprint sources customer + SSA</div>`;
-  pair.appendChild(bpNode); pair.appendChild(mid); pair.appendChild(varNode);
-  container.appendChild(pair);
-  container.appendChild(connector());
-
-  /* ── COMPONENT LAYER ───────────────────────────────────────────────────── */
-  container.appendChild(row(node('item','itm','Item','Item','Customer-designated finished pallet unit in NetSuite · Gated by SOW signed + PC approved'), node('bom','bom','BOM + Revision','BOM + BOM Revision','Component recipe: RM Items, Packaging Materials, consumables')));
-  container.appendChild(connector());
-  const t2Row = document.createElement('div'); t2Row.className = 'flow-row'; t2Row.style.maxWidth = '580px';
-  t2Row.appendChild(node('rmitem','rm','RM Item','RM Item','Inbound WIP / raw material record used in BOM Revision'));
-  t2Row.appendChild(node('pkgitem','pkg','Packaging Material','Packaging Material','Labels, stickers, and packaging components in BOM Revision'));
-  container.appendChild(t2Row);
-  container.appendChild(connector());
+  /* ── ENTRY + COMPONENT LAYERS — one path at a time, per FLOW_MODE ──────── */
+  if (FLOW_MODE === 'new') {
+    /* New project: PC first → Blueprint auto-creates and fills UP ⟲ */
+    container.appendChild(row(node('variation','var','START HERE · Variation / PC','Variation / PC','Commercial dev prices first — no Blueprint paperwork · Requires Ops + Engineering approval','A brand-new project — get a price in front of the customer fast')));
+    container.appendChild(labeledConnector('⟲ auto-creates a minimal blueprint'));
+    container.appendChild(row(node('blueprint','bp','Blueprint · Auto-Populating ⟲','Blueprint','Auto-populates from the Variation and Item as they are filled out — fields roll UP, nothing typed twice','Auto-created from the PC at intake')));
+    container.appendChild(labeledConnector('build the components — each one feeds the blueprint ⟲'));
+    container.appendChild(row(
+      node('item','itm','Item · feeds blueprint ⟲','Item','Customer-designated finished pallet unit · its specs roll UP into the Blueprint ⟲ · Gated by SOW signed + PC approved'),
+      node('bom','bom','BOM + Revision','BOM + BOM Revision','Component recipe: RM Items, Packaging Materials, consumables')));
+    container.appendChild(connector());
+    const t2Row = document.createElement('div'); t2Row.className = 'flow-row'; t2Row.style.maxWidth = '580px';
+    t2Row.appendChild(node('rmitem','rm','RM Item · feeds blueprint ⟲','RM Item','Inbound WIP record used in BOM Revision · stack heights + specs roll UP into the Blueprint ⟲'));
+    t2Row.appendChild(node('pkgitem','pkg','Packaging · feeds blueprint ⟲','Packaging Material','Labels + packaging components in BOM Revision · specs roll UP into the Blueprint ⟲'));
+    container.appendChild(t2Row);
+    container.appendChild(connector());
+  } else {
+    /* Existing project: Blueprint exists → fields fill DOWN ↓ into new records */
+    container.appendChild(row(node('blueprint','bp','START HERE · Blueprint ✓ Exists','Blueprint','Already exists for this customer/product · Its fields fill DOWN ↓ into every record below — zero redundant entry','Already exists — evaluate what changed (see the Decision Tree)')));
+    container.appendChild(labeledConnector('↓ auto-fills customer · SSA · specs'));
+    container.appendChild(row(node('variation','var','Variation / PC · pre-filled ↓','Variation / PC','New PC for the change — customer + spec fields pre-filled from the Blueprint · Requires Ops + Engineering approval','Anything that changes price: WIP size, pallet qty, labels')));
+    container.appendChild(labeledConnector('↓ blueprint pre-fills the component records'));
+    container.appendChild(row(
+      node('item','itm','Item · pre-filled ↓','Item','Customer-designated finished pallet unit · container + spec fields pre-filled from the Blueprint ↓ · Gated by SOW signed + PC approved'),
+      node('bom','bom','BOM + Revision','BOM + BOM Revision','Component recipe: RM Items, Packaging Materials, consumables')));
+    container.appendChild(connector());
+    const t2Row = document.createElement('div'); t2Row.className = 'flow-row'; t2Row.style.maxWidth = '580px';
+    t2Row.appendChild(node('rmitem','rm','RM Item · pre-filled ↓','RM Item','Inbound WIP record used in BOM Revision · specs pre-filled from the Blueprint ↓'));
+    t2Row.appendChild(node('pkgitem','pkg','Packaging · pre-filled ↓','Packaging Material','Labels + packaging components in BOM Revision · specs pre-filled from the Blueprint ↓'));
+    container.appendChild(t2Row);
+    container.appendChild(connector());
+  }
 
   /* ── COMMERCIAL GATE + ORDER ───────────────────────────────────────────── */
   const caEl = document.createElement('div'); caEl.className = 'flow-node ca'; caEl.style.maxWidth = '480px'; caEl.style.borderRadius = '32px'; caEl.style.textAlign = 'center';
@@ -6656,20 +6705,21 @@ function buildDecisionTree() {
         <div class="t-branch-side"><div class="t-branch-label no">No — one or both false</div><div class="t-vert"></div><div class="t-outcome gray"><div class="out-action">Keep existing Item</div><div class="out-sub">Treat as a service modification</div></div></div>
       </div>
       <div class="t-divider"><span>Evaluate component recipe</span></div>
-      <div class="t-node purple" style="max-width:520px"><div class="t-label">Step 4 — BOM</div><div class="t-title">Did the component recipe change?</div><div class="t-examples">New materials · A sticker added but item stayed the same · Any component add / remove / qty change</div></div>
+      <div class="t-node purple" style="max-width:560px"><div class="t-label">Step 4 — BOM · <span style="color:var(--c-flag)">⚑ under review</span></div><div class="t-title">Did materials change while the customer still views it as the SAME item?</div><div class="t-examples">e.g. corner boards added, but the customer's item is unchanged → new BOM with corner boards included</div></div>
       <div class="t-branch" style="margin-top:24px">
-        <div class="t-branch-side"><div class="t-branch-label yes">Yes</div><div class="t-vert"></div><div class="t-outcome purple"><div class="out-action">Create new BOM + BOM Revision</div><div class="out-sub">BOM = parent · BOM Revision = component items</div></div></div>
+        <div class="t-branch-side"><div class="t-branch-label yes">Yes</div><div class="t-vert"></div><div class="t-outcome purple"><div class="out-action">Create new BOM + BOM Revision</div><div class="out-sub">Same Item · new recipe — BOM = parent · BOM Revision = component items</div></div></div>
         <div class="t-branch-center"><div class="t-h-line"></div></div>
         <div class="t-branch-side"><div class="t-branch-label no">No</div><div class="t-vert"></div><div class="t-outcome gray"><div class="out-action">Keep existing BOM</div><div class="out-sub">No changes needed</div></div></div>
       </div>
     </div>
+    <div class="t-note" style="margin-top:24px;border-color:rgba(255,144,64,0.3);border-left:3px solid var(--c-flag);background:rgba(255,144,64,0.05)"><strong style="color:var(--c-flag)">⚑ Flagged for review:</strong> The new-BOM trigger is now "materials change while the customer still views it as the same item." Edge cases still to be identified before this rule is finalized — revisit with the team.</div>
     <div class="t-note purple" style="margin-top:40px"><strong>BOM structure:</strong> Every BOM always has a BOM Revision attached to it. The BOM is the parent record. The BOM Revision holds the individual component items (packaging materials, raw materials, stickers, etc.).</div>
     <div class="t-summary" style="margin-top:28px">
       <div class="t-summary-hdr">Quick reference</div>
       <div class="t-summary-row"><div class="t-summary-rec"><div class="t-dot" style="background:#5A9CD8"></div><div class="t-rec-name" style="color:#5A9CD8">Blueprint</div></div><div class="t-summary-cond">New customer or new product line</div></div>
       <div class="t-summary-row"><div class="t-summary-rec"><div class="t-dot" style="background:#D4A830"></div><div class="t-rec-name" style="color:#D4A830">Variation / PC</div></div><div class="t-summary-cond">WIP size · Pallet qty · Labels added · Anything affecting project price</div></div>
       <div class="t-summary-row"><div class="t-summary-rec"><div class="t-dot" style="background:#5ACA5A"></div><div class="t-rec-name" style="color:#5ACA5A">Item</div></div><div class="t-summary-cond">Physical pallet changed AND customer designates as new item — both required</div></div>
-      <div class="t-summary-row"><div class="t-summary-rec"><div class="t-dot" style="background:#4ACAC8"></div><div class="t-rec-name" style="color:#4ACAC8">BOM + Revision</div></div><div class="t-summary-cond">New materials · Sticker added · Any component recipe change</div></div>
+      <div class="t-summary-row"><div class="t-summary-rec"><div class="t-dot" style="background:#4ACAC8"></div><div class="t-rec-name" style="color:#4ACAC8">BOM + Revision</div></div><div class="t-summary-cond">Materials change while the customer still sees the SAME item (e.g. corner boards added) · <span style="color:var(--c-flag)">⚑ edge cases under review</span></div></div>
     </div>
     <div class="t-note teal" style="margin-top:12px"><strong style="color:var(--c-bom)">Service modification:</strong> A physical change the customer does not designate as a new item in their system. Use the existing Item. Ship &amp; Receive fulfills against the existing item number.</div>
   `;
