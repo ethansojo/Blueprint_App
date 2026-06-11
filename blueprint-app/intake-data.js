@@ -16,6 +16,10 @@
 
 const APPROVED_SUPPLIERS = ['DrinkPak', 'Zumbiel', 'Other (specify)'];
 
+/* Choosing this option in any dropdown reveals a free-entry companion field
+   AND flags the answer as customer-entered (✍) in the Internal Review. */
+const INTAKE_CUSTOM_SENTINEL = 'Enter my own value';
+
 const INTAKE_SECTIONS = [
   { id: 's1', num: 1, title: 'Project Overview', scope: 'project',
     desc: 'Filled once per submission — who you are and when you need this running.',
@@ -37,7 +41,8 @@ const INTAKE_SECTIONS = [
       { id: 'containerSpec',     label: 'Container Spec',        type: 'text', required: true, helper: 'e.g. Sleek, Standard, Slim' },
       { id: 'numFlavors',        label: 'Number of Flavors',     type: 'number', required: true },
       { id: 'inboundCaseCount',  label: 'Inbound Case Count',    type: 'number', required: true, helper: 'Units per inbound WIP case' },
-      { id: 'casesPerPallet',    label: 'Cases per Pallet',      type: 'number', required: true, helper: 'Finished good cases per outbound pallet' },
+      { id: 'casesPerPallet',    label: 'Cases per Pallet',      type: 'select', required: true, helper: 'Finished good cases per outbound pallet — pick a typical value or enter your own', options: ['45','56','60','65','72','80','84','91','104', INTAKE_CUSTOM_SENTINEL] },
+      { id: 'casesPerPalletCustom', label: 'Your cases per pallet', type: 'number', required: true, helper: 'Custom values are flagged for Sojo review', showIf: { field: 'casesPerPallet', equals: INTAKE_CUSTOM_SENTINEL } },
       { id: 'palletType',        label: 'Pallet Type',           type: 'select', required: true, options: ['GMA Whitewood','Plastic','CHEP','Other'] },
       { id: 'masterCaseShrink',  label: 'Does the master case require shrink?', type: 'select', required: true, options: ['Yes','No'] },
     ]},
@@ -103,7 +108,9 @@ const INTAKE_SECTIONS = [
     desc: "List each component in this product's Bill of Materials. One row per material. All item setups are per 1 BOM.",
     fields: [
       { id: 'wipSupplier', label: 'WIP Supplier',       type: 'select', required: true, options: 'suppliers' },
+      { id: 'wipSupplierOther', label: 'Specify WIP supplier', type: 'text', showIf: { field: 'wipSupplier', equals: 'Other (specify)' } },
       { id: 'pkgSupplier', label: 'Packaging Supplier', type: 'select', required: true, options: 'suppliers' },
+      { id: 'pkgSupplierOther', label: 'Specify packaging supplier', type: 'text', showIf: { field: 'pkgSupplier', equals: 'Other (specify)' } },
     ]},
   { id: 's9', num: 9, title: 'Artwork & Dielines', scope: 'product',
     desc: 'Everything our engineering team needs to spec the pack.',
@@ -127,7 +134,8 @@ const BOM_ROW_FIELDS = [
   { id: 'custItemNum',  label: 'Customer Item Number', type: 'text' },
   { id: 'bomQty',       label: 'BOM Qty per finished case', type: 'number', required: true },
   { id: 'rowLotCode',   label: 'Lot Code Format', type: 'select', options: ['MMDDYY (Sojo Standard)','YYMMDD','Custom'] },
-  { id: 'casesPerInboundPallet', label: 'Cases per inbound pallet', type: 'number' },
+  { id: 'casesPerInboundPallet', label: 'Cases per inbound pallet', type: 'select', options: ['45','56','60','72','88','104', INTAKE_CUSTOM_SENTINEL] },
+  { id: 'casesPerInboundPalletCustom', label: 'Your cases per inbound pallet', type: 'number', showIf: { field: 'casesPerInboundPallet', equals: INTAKE_CUSTOM_SENTINEL } },
   { id: 'inboundPalletType', label: 'Inbound Pallet Type', type: 'select', options: ['GMA Whitewood','Plastic','CHEP','Other'] },
   { id: 'supplier',      label: 'Supplier', type: 'select', options: 'suppliers' },
   { id: 'supplierOther', label: 'Specify supplier', type: 'text', showIf: { field: 'supplier', equals: 'Other (specify)' } },
