@@ -5076,6 +5076,22 @@ textarea.fe-input { min-height: 72px; resize: vertical; font-family: 'Manrope', 
 .erd-wrap svg { display: block; margin: 0 auto; }
 .erd-box { cursor: pointer; }
 .erd-box:hover .erd-box-bg { stroke-width: 2.5; }
+/* ERD data-direction highlight mode — structure never changes; the
+   Blueprint-connected lines pulse gold-up (new) or blue-down (existing) */
+.erd-dir-toggle { display: flex; width: 100%; max-width: 680px; margin: 0 auto 8px; border: 1px solid var(--border); border-radius: 10px; overflow: hidden; background: var(--surface); }
+.erd-dir-toggle button { flex: 1; padding: 9px 12px; background: transparent; border: none; color: var(--muted); font-family: 'Manrope', sans-serif; font-size: 11.5px; font-weight: 700; cursor: pointer; transition: background 0.15s, color 0.15s; }
+.erd-dir-toggle button:hover { color: var(--text); }
+.erd-dir-toggle button.active[data-dir="off"]  { background: rgba(255,255,255,0.06); color: var(--text); }
+.erd-dir-toggle button.active[data-dir="up"]   { background: rgba(212,168,48,0.14); color: #E8C040; box-shadow: inset 0 -2px 0 #D4A830; }
+.erd-dir-toggle button.active[data-dir="down"] { background: rgba(90,156,216,0.14); color: #92CCF0; box-shadow: inset 0 -2px 0 #5A9CD8; }
+.erd-dir-note { font-size: 11.5px; color: var(--muted); text-align: center; min-height: 18px; margin-bottom: 10px; font-style: italic; }
+#erdSvg line { transition: stroke 0.2s, opacity 0.2s; }
+#erdSvg.dir-up line.erd-bp-link   { stroke: #D4A830; stroke-width: 2.5; stroke-dasharray: 7 6; animation: erd-flow-up 0.8s linear infinite; }
+#erdSvg.dir-down line.erd-bp-link { stroke: #5A9CD8; stroke-width: 2.5; stroke-dasharray: 7 6; animation: erd-flow-down 0.8s linear infinite; }
+#erdSvg.dir-up line:not(.erd-bp-link),  #erdSvg.dir-down line:not(.erd-bp-link)  { opacity: 0.3; }
+@keyframes erd-flow-up   { to { stroke-dashoffset: -26; } }
+@keyframes erd-flow-down { to { stroke-dashoffset: 26; } }
+
 .erd-frow { display: flex; justify-content: space-between; gap: 12px; font-size: 11.5px; padding: 3px 2px; border-bottom: 1px solid rgba(255,255,255,0.04); }
 .erd-frow span:first-child { color: #D2D2DE; }
 .erd-frow span:last-child { font-family: 'JetBrains Mono', monospace; font-size: 9px; font-weight: 700; white-space: nowrap; padding-top: 2px; }
@@ -5345,6 +5361,7 @@ function switchView(id) {
   closePanel();
   if (id === 'price' && typeof pfReset === 'function') pfReset();
   if (id === 'flow' && typeof flowReset === 'function') flowReset();
+  if (id === 'erd' && typeof setErdDir === 'function') setErdDir('off');
 }
 
 /* Clear all search/filter highlights so each view opens in a clean default state */
@@ -6078,6 +6095,22 @@ function erdLinkRows(e) {
   return rows;
 }
 
+/* Data-direction highlight — recolors/animates the Blueprint-connected lines.
+   The diagram structure never changes; there is ONE ERD. */
+function setErdDir(dir) {
+  const svg = document.getElementById('erdSvg');
+  if (!svg) return;
+  svg.classList.remove('dir-up', 'dir-down');
+  if (dir === 'up') svg.classList.add('dir-up');
+  if (dir === 'down') svg.classList.add('dir-down');
+  document.querySelectorAll('#erdDirToggle button').forEach(b => b.classList.toggle('active', b.dataset.dir === dir));
+  const note = document.getElementById('erdDirNote');
+  if (note) note.textContent =
+    dir === 'up'   ? 'Gold pulses → Variation, Item, RM Item, and Packaging roll their fields UP into the Blueprint as they are filled out (new projects).' :
+    dir === 'down' ? 'Blue pulses → the existing Blueprint fills its fields DOWN into the new Variation, Item, RM Item, and Packaging records (existing projects).' :
+    '';
+}
+
 function buildErdView() {
   const wrap = document.getElementById('erdView');
   wrap.innerHTML = `
@@ -6086,6 +6119,12 @@ function buildErdView() {
       <h1>How the records link</h1>
       <p>Layer 1: primary keys, prerequisite links, and cardinality — the 🔗 rows come live from each record's Prerequisites in the Source Map. <strong>Click any record</strong> to drill into Layer 2 — its full field list.</p>
     </div>
+    <div class="erd-dir-toggle" id="erdDirToggle">
+      <button type="button" data-dir="off" class="active" onclick="setErdDir('off')">Static ERD</button>
+      <button type="button" data-dir="up" onclick="setErdDir('up')">⟲ New — fields roll UP</button>
+      <button type="button" data-dir="down" onclick="setErdDir('down')">↓ Existing — fields fill DOWN</button>
+    </div>
+    <div class="erd-dir-note" id="erdDirNote"></div>
     <div class="erd-wrap"><svg id="erdSvg" xmlns="http://www.w3.org/2000/svg"></svg></div>`;
   const NS = 'http://www.w3.org/2000/svg';
   const svg = document.getElementById('erdSvg');
@@ -6100,6 +6139,7 @@ function buildErdView() {
     const a = ctr(byId[l.from]), b = ctr(byId[l.to]);
     const ln = mk('line', { x1: a.x, y1: a.y, x2: b.x, y2: b.y, stroke: '#3A3A46', 'stroke-width': 1.5 });
     if (l.dashed) ln.setAttribute('stroke-dasharray', '5 5');
+    if (l.to === 'blueprint') ln.setAttribute('class', 'erd-bp-link');   // direction-highlight targets
     svg.appendChild(ln);
     const midX = (a.x + b.x) / 2, midY = (a.y + b.y) / 2;
     const txt = [l.card, l.label].filter(Boolean).join(' · ');
