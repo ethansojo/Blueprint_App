@@ -2810,6 +2810,27 @@ function inInit() {
   // migrate older saved drafts: ensure Not-sure maps exist
   if (!IN_STATE.nsO) IN_STATE.nsO = {};
   IN_STATE.products.forEach(p => { if (!p.ns) p.ns = {}; });
+  // migrate: complianceArtwork was a free-text textarea before becoming a checklist
+  IN_STATE.products.forEach(p => {
+    if (typeof p.answers.complianceArtwork === 'string' && p.answers.complianceArtwork) {
+      if (!p.answers.complianceArtworkNotes) p.answers.complianceArtworkNotes = p.answers.complianceArtwork;
+      delete p.answers.complianceArtwork;
+    }
+  });
+  // migrate: fields converted from free entry to dropdowns — a saved value that
+  // matches no option moves into the Custom companion (and gets the ✍ flag)
+  const inMigrateToSentinel = (vals, fields) => fields.forEach(f => {
+    if (!Array.isArray(f.options) || !f.options.includes(INTAKE_CUSTOM_SENTINEL)) return;
+    const v = vals[f.id];
+    if (v && v !== INTAKE_CUSTOM_SENTINEL && !f.options.includes(String(v))) {
+      if (!vals[f.id + 'Custom']) vals[f.id + 'Custom'] = v;
+      vals[f.id] = INTAKE_CUSTOM_SENTINEL;
+    }
+  });
+  IN_STATE.products.forEach(p => {
+    INTAKE_SECTIONS.filter(s => s.scope === 'product').forEach(s => inMigrateToSentinel(p.answers, s.fields));
+    p.bom.forEach(r => inMigrateToSentinel(r, BOM_ROW_FIELDS));
+  });
   setInterval(() => { const el = document.getElementById('inSaved'); if (el && IN_STATE.lastSaved) el.textContent = 'Last saved ' + Math.max(0, Math.round((Date.now() - IN_STATE.lastSaved) / 1000)) + 's ago'; }, 5000);
   setInterval(inSave, 30000);  // spec: autosave every 30s (also saves on every change)
 }
@@ -2972,7 +2993,10 @@ function inCustomEntries(p) {
   if (p.answers.wipSupplier === 'Other (specify)') out.push({ field: 'WIP Supplier', value: p.answers.wipSupplierOther || '(not entered)' });
   if (p.answers.pkgSupplier === 'Other (specify)') out.push({ field: 'Packaging Supplier', value: p.answers.pkgSupplierOther || '(not entered)' });
   p.bom.forEach((r, i) => {
-    if (r.casesPerInboundPallet === INTAKE_CUSTOM_SENTINEL) out.push({ field: 'Material ' + (i + 1) + ': Cases per inbound pallet', value: r.casesPerInboundPalletCustom || '(not entered)' });
+    BOM_ROW_FIELDS.forEach(f => {
+      if (Array.isArray(f.options) && f.options.includes(INTAKE_CUSTOM_SENTINEL) && r[f.id] === INTAKE_CUSTOM_SENTINEL)
+        out.push({ field: 'Material ' + (i + 1) + ': ' + f.label, value: r[f.id + 'Custom'] || '(not entered)' });
+    });
     if (r.supplier === 'Other (specify)') out.push({ field: 'Material ' + (i + 1) + ': Supplier', value: r.supplierOther || '(not entered)' });
   });
   return out;
