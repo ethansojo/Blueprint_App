@@ -15,9 +15,18 @@
 */
 'use strict';
 
+/* ── Not-Sure config (edit text / requiredness here, not in the components) ── */
+const NS_PROMPT = "Tell us why you couldn't complete this field — this helps our team follow up.";
+const NS_NOTE_REQUIRED = false;   // set true to force a note before the customer can Save
+const NS_VALUE = 'NOT_SURE';      // marker stored in the flag row's value column
+
 function flMap(scope) {
   return scope === 'o' ? IN_STATE.flagsO : IN_STATE.products[IN_STATE.active].flags;
 }
+// A Not-sure entry is stored as { note } (object → always truthy so gating still
+// treats the field as answered). Older drafts stored `true`; handle both.
+function flNsNote(entry) { return (entry && typeof entry === 'object' && entry.note) ? entry.note : ''; }
+function flNsOn(scope, key) { const m = scope === 'o' ? IN_STATE.nsO : IN_STATE.products[IN_STATE.active].ns; return !!(m && m[key]); }
 function flAutoNote(kind) {
   return kind === 'ns'
     ? 'Customer marked "Not sure" — review with customer'
@@ -69,9 +78,9 @@ function flBomFlagged(key, row, fid) {
 
 /* ── the note shown in the popover for a key (explicit wins, else auto) ── */
 function flNoteFor(scope, key, store, ns) {
+  if (ns && ns[key]) return flNsNote(ns[key]);     // Not-sure → the customer's typed note (may be '')
   const m = flMap(scope);
   if (m && m[key]) return m[key].note || '';
-  if (ns && ns[key]) return flAutoNote('ns');
   if (store && (store[key] === INTAKE_CUSTOM_SENTINEL || ((key === 'wipSupplier' || key === 'pkgSupplier') && store[key] === 'Other (specify)'))) return flAutoNote('custom');
   return '';
 }
@@ -117,11 +126,12 @@ function flBuildAll() {
     if (seen[k]) return; seen[k] = 1;
     rows.push(Object.assign({ project_id: IN_STATE.id, field_id: field_id, product_index: pi, flagged_by: 'customer' }, o));
   };
+  // Not-sure flags first so their NOT_SURE value + customer note win the (pi|id) slot.
+  Object.keys(IN_STATE.nsO || {}).forEach(id => { const m = flOvMeta(id); add(null, id, { field_label: m.label, section: 'Project Overview', value: NS_VALUE, note: flNsNote(IN_STATE.nsO[id]) }); });
   Object.keys(IN_STATE.flagsO || {}).forEach(id => { const m = flOvMeta(id); add(null, id, { field_label: m.label, section: 'Project Overview', value: m.value, note: IN_STATE.flagsO[id].note || '' }); });
-  Object.keys(IN_STATE.nsO || {}).forEach(id => { const m = flOvMeta(id); add(null, id, { field_label: m.label, section: 'Project Overview', value: '', note: flAutoNote('ns') }); });
   IN_STATE.products.forEach((p, pi) => {
+    Object.keys(p.ns || {}).forEach(id => { const m = flProdMeta(p, id); add(pi, id, { field_label: m.label, section: m.section, value: NS_VALUE, note: flNsNote(p.ns[id]) }); });
     Object.keys(p.flags || {}).forEach(key => { const m = flProdMeta(p, key); add(pi, key, { field_label: m.label, section: m.section, value: m.value, note: (p.flags[key].note || '') }); });
-    Object.keys(p.ns || {}).forEach(id => { const m = flProdMeta(p, id); add(pi, id, { field_label: m.label, section: m.section, value: '', note: flAutoNote('ns') }); });
     flCustomEntries(p).forEach(c => add(pi, c.field_id, { field_label: c.label, section: c.section, value: c.value, note: flAutoNote('custom') }));
   });
   return rows;
@@ -133,14 +143,23 @@ function flPush(scope, key) {
     let row;
     if (scope === 'o') {
       const m = flOvMeta(key);
-      row = { field_id: key, field_label: m.label, section: 'Project Overview', product_index: null, value: m.value, note: flNoteFor('o', key, IN_STATE.overview, IN_STATE.nsO), flagged_by: 'customer' };
+      row = { field_id: key, field_label: m.label, section: 'Project Overview', product_index: null, value: flNsOn('o', key) ? NS_VALUE : m.value, note: flNoteFor('o', key, IN_STATE.overview, IN_STATE.nsO), flagged_by: 'customer' };
     } else {
       const p = IN_STATE.products[IN_STATE.active];
       const m = flProdMeta(p, key);
-      row = { field_id: key, field_label: m.label, section: m.section, product_index: IN_STATE.active, value: m.value, note: flNoteFor('p', key, p.answers, p.ns), flagged_by: 'customer' };
+      row = { field_id: key, field_label: m.label, section: m.section, product_index: IN_STATE.active, value: flNsOn('p', key) ? NS_VALUE : m.value, note: flNoteFor('p', key, p.answers, p.ns), flagged_by: 'customer' };
     }
     fetch('/api/submissions/' + encodeURIComponent(IN_STATE.id) + '/flags', {
       method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(row),
     }).catch(function () {});
   } catch (e) { /* file:// or offline — flag still rides in the submit payload */ }
+}
+// Remove a live flag row (used when Not-sure is cancelled/unchecked).
+function flPushRemove(scope, key) {
+  try {
+    fetch('/api/submissions/' + encodeURIComponent(IN_STATE.id) + '/flags/remove', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ field_id: key, product_index: scope === 'o' ? null : IN_STATE.active }),
+    }).catch(function () {});
+  } catch (e) { /* offline */ }
 }

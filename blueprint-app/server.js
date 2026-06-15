@@ -87,6 +87,16 @@ app.post('/api/submissions/:id/flags', (req, res) => {
   }
 });
 
+// Remove a live form flag (Not-sure cancelled / unchecked). Public, like the form.
+app.post('/api/submissions/:id/flags/remove', (req, res) => {
+  try {
+    db.removeFormFlag({ ...(req.body || {}), project_id: req.params.id });
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(400).json({ ok: false, error: err.message });
+  }
+});
+
 /* ════════════════════════════════════════════════════════════════════════
    INTERNAL VIEWS  (no login — reachable only via the unlisted base path)
    ════════════════════════════════════════════════════════════════════════ */
@@ -138,10 +148,13 @@ app.post(DASH + '/api/projects/:id/flags', (req, res) => {
   }
 });
 
-// Flag review (Part D): edit a note / clear a flag.
+// Flag review: add/edit the reviewer's internal note (or the customer note), or clear.
 app.patch(DASH + '/api/flags/:flagId', (req, res) => {
   try {
-    const ok = db.updateFlagNote(req.params.flagId, (req.body || {}).note);
+    const b = req.body || {};
+    const ok = b.internal_note !== undefined
+      ? db.updateInternalNote(req.params.flagId, b.internal_note)
+      : db.updateFlagNote(req.params.flagId, b.note);
     if (!ok) return res.status(404).json({ ok: false, error: 'Not found' });
     res.json({ ok: true });
   } catch (err) {
@@ -237,6 +250,10 @@ const STYLES = `
   .flagrow { border:1px solid rgba(255,144,64,0.3); background:rgba(255,144,64,0.05); border-radius:9px; padding:10px 13px; margin-bottom:9px; }
   .flagrow .fl-label { font-weight:800; color:var(--c-flag); }
   .flagrow .fl-meta { font-size:11.5px; color:var(--muted); margin-top:2px; }
+  .fl-note { font-size:12.5px; margin-top:5px; color:var(--text); }
+  .fl-note b { color:var(--c-flag); font-weight:800; }
+  .fl-note.fl-internal { color:#cfe0f5; } .fl-note.fl-internal b { color:var(--c-bp); }
+  .ns-badge, .fr-ns { display:inline-block; padding:1px 8px; border-radius:11px; font-size:11px; font-weight:800; color:#E8A33D; background:rgba(217,119,6,0.16); }
   .map-table td, .map-table th { font-size:12.5px; }
   .map-arrow { color:var(--dim); }
   code { font-family:'JetBrains Mono',monospace; font-size:12px; color:var(--accent); }
@@ -251,6 +268,11 @@ const STYLES = `
   .fr-card .fr-field { font-weight:800; color:var(--c-flag); }
   .fr-card .fr-val { color:var(--text); }
   .fr-card .fr-meta { font-size:11px; color:var(--muted); margin:3px 0 8px; }
+  .fr-lbl { font-size:11px; font-weight:800; text-transform:uppercase; letter-spacing:0.04em; }
+  .fr-custnote { font-size:12.5px; color:var(--text); background:rgba(255,144,64,0.06); border-left:2px solid var(--c-flag); border-radius:0 6px 6px 0; padding:7px 10px; margin-bottom:8px; }
+  .fr-custnote .fr-lbl { color:var(--c-flag); margin-right:4px; }
+  .fr-empty { color:var(--dim); font-style:italic; font-weight:400; }
+  .fr-intlbl { display:block; color:var(--c-bp); margin-bottom:4px; }
   .fr-note { width:100%; background:rgba(255,255,255,0.04); border:1px solid var(--border); border-radius:7px; padding:8px 10px; color:var(--text); font-family:inherit; font-size:12.5px; resize:vertical; min-height:46px; }
   .fr-actions { margin-top:7px; display:flex; gap:8px; }
   .fr-actions button { border:none; border-radius:7px; padding:6px 12px; font-family:inherit; font-size:12px; font-weight:700; cursor:pointer; }
@@ -363,11 +385,17 @@ function renderDetail(p) {
   const overview = (p.payload && p.payload.overview) || {};
   const products = (p.payload && p.payload.products) || [];
 
-  const flagsHtml = p.flags.length ? p.flags.map(f => `
-    <div class="flagrow">
-      <div class="fl-label">${esc(f.field_label)}${f.value ? ' — <span style="color:var(--text)">' + esc(f.value) + '</span>' : ''}</div>
-      <div class="fl-meta">${esc(f.section)}${f.product_index != null ? ' · product ' + (f.product_index + 1) : ''} · ${esc(f.note)} · <em>${esc(f.flagged_by)}</em></div>
-    </div>`).join('') : '<p style="color:var(--muted)">No flagged fields.</p>';
+  const prodName = pi => (pi == null) ? 'Project Overview' : ((products[pi] && products[pi].name) || ('Product ' + (pi + 1)));
+  const flagsHtml = p.flags.length ? p.flags.map(f => {
+    const isNs = f.value === 'NOT_SURE';
+    const valTag = isNs ? ' <span class="ns-badge">🤔 Not sure</span>' : (f.value ? ' — <span style="color:var(--text)">' + esc(f.value) + '</span>' : '');
+    return `<div class="flagrow">
+      <div class="fl-label">${esc(f.field_label)}${valTag}</div>
+      <div class="fl-meta">${esc(f.section)} · ${esc(prodName(f.product_index))} · flagged by <em>${esc(f.flagged_by)}</em></div>
+      <div class="fl-note"><b>Customer note:</b> ${f.note ? esc(f.note) : '<span style="color:var(--dim)">— none provided —</span>'}</div>
+      ${f.internal_note ? `<div class="fl-note fl-internal"><b>Internal note:</b> ${esc(f.internal_note)}</div>` : ''}
+    </div>`;
+  }).join('') : '<p style="color:var(--muted)">No flagged fields.</p>';
 
   const productCards = products.map((prod, pi) => {
     const answers = prod.answers || {};
@@ -438,16 +466,22 @@ function renderFlagReview(p) {
   const groupsHtml = orderedKeys.map(pk => {
     const secs = groups[pk];
     const secHtml = Object.keys(secs).map(sk => {
-      const cards = secs[sk].map(f => `
+      const cards = secs[sk].map(f => {
+        const isNs = f.value === 'NOT_SURE';
+        const valTag = isNs ? ' <span class="fr-ns">🤔 Not sure</span>' : (f.value ? ' — <span class="fr-val">' + esc(f.value) + '</span>' : '');
+        return `
         <div class="fr-card" data-flag="${f.id}">
-          <div class="fr-field">${esc(f.field_label)}${f.value ? ' — <span class="fr-val">' + esc(f.value) + '</span>' : ''}</div>
+          <div class="fr-field">${esc(f.field_label)}${valTag}</div>
           <div class="fr-meta">flagged by <em>${esc(f.flagged_by)}</em> · ${esc((f.created_at || '').slice(0, 16).replace('T', ' '))}</div>
-          <textarea class="fr-note" id="note-${f.id}">${esc(f.note)}</textarea>
+          <div class="fr-custnote"><span class="fr-lbl">Customer note:</span> ${f.note ? esc(f.note) : '<span class="fr-empty">— none provided —</span>'}</div>
+          <label class="fr-lbl fr-intlbl" for="note-${f.id}">Internal note (follow-up):</label>
+          <textarea class="fr-note" id="note-${f.id}" placeholder="Add a follow-up note for the team…">${esc(f.internal_note || '')}</textarea>
           <div class="fr-actions">
-            <button class="fr-save" onclick="saveNote(${f.id})">Save note</button>
+            <button class="fr-save" onclick="saveNote(${f.id})">Save internal note</button>
             <button class="fr-clear" onclick="clearFlag(${f.id})">Clear flag</button>
           </div>
-        </div>`).join('');
+        </div>`;
+      }).join('');
       return `<div class="fr-sec">${esc(sk)}</div>${cards}`;
     }).join('');
     return `<div class="fr-group"><h2>${esc(groupName(pk))}</h2>${secHtml}</div>`;
@@ -465,7 +499,7 @@ function renderFlagReview(p) {
     var FLAGS = ${JSON.stringify(flags)};
     function saveNote(id) {
       var note = document.getElementById('note-' + id).value;
-      fetch(BASE + '/api/flags/' + id, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ note: note }) })
+      fetch(BASE + '/api/flags/' + id, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ internal_note: note }) })
         .then(function (r) { if (!r.ok) alert('Could not save note'); else flash(id); });
     }
     function clearFlag(id) {

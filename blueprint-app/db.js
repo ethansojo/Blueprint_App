@@ -53,6 +53,10 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_flags_project ON flags(project_id);
 `);
 
+// Migration: internal_note holds the reviewer's follow-up note (distinct from
+// the customer's `note`). ALTER throws if the column already exists — ignore.
+try { db.exec(`ALTER TABLE flags ADD COLUMN internal_note TEXT`); } catch (e) { /* already added */ }
+
 // ── config: status names (edit here only) ───────────────────────────────────
 // COMPLETED_STATUS is the single value that means "this project setup is done".
 // The dashboard treats everything else as ACTIVE and this one as ARCHIVED.
@@ -88,8 +92,11 @@ const stmt = {
   getFlags: db.prepare(`SELECT * FROM flags WHERE project_id = ? ORDER BY id`),
   getFlag: db.prepare(`SELECT * FROM flags WHERE id = ?`),
   updateFlagNote: db.prepare(`UPDATE flags SET note = @note WHERE id = @id`),
+  updateInternalNote: db.prepare(`UPDATE flags SET internal_note = @internal_note WHERE id = @id`),
   deleteFlag: db.prepare(`DELETE FROM flags WHERE id = ?`),
   deleteFormFlag: db.prepare(`DELETE FROM flags WHERE project_id = @project_id AND field_id = @field_id AND IFNULL(product_index,-1) = IFNULL(@product_index,-1) AND flagged_by = 'customer'`),
+  customerInternalNotes: db.prepare(`SELECT field_id, product_index, internal_note FROM flags WHERE project_id = ? AND flagged_by = 'customer' AND internal_note IS NOT NULL AND internal_note != ''`),
+  setInternalByKey: db.prepare(`UPDATE flags SET internal_note = @internal_note WHERE project_id = @project_id AND field_id = @field_id AND IFNULL(product_index,-1) = IFNULL(@product_index,-1) AND flagged_by = 'customer'`),
   updateStatus: db.prepare(`UPDATE submissions SET status = @status, updated_at = @now WHERE project_id = @project_id`),
 };
 
@@ -151,7 +158,9 @@ const saveSubmission = db.transaction((payload) => {
     full_payload: JSON.stringify(payload),
   });
 
-  // Replace customer flags on resubmit (keep any admin-added ones).
+  // Replace customer flags on resubmit (keep any admin-added ones). Preserve
+  // reviewers' internal_note across the rewrite, keyed by field_id+product_index.
+  const internalSnap = stmt.customerInternalNotes.all(project_id);
   db.prepare(`DELETE FROM flags WHERE project_id = ? AND flagged_by = 'customer'`).run(project_id);
   flagList.forEach(f => stmt.insertFlag.run({
     project_id,
@@ -163,6 +172,9 @@ const saveSubmission = db.transaction((payload) => {
     note: f.note || '',
     flagged_by: f.flagged_by || 'customer',
     now,
+  }));
+  internalSnap.forEach(s => stmt.setInternalByKey.run({
+    project_id, field_id: s.field_id, product_index: s.product_index, internal_note: s.internal_note,
   }));
 
   return project_id;
@@ -264,9 +276,22 @@ const saveFormFlag = db.transaction((flag) => {
   });
 });
 
-// Flag review screen (Part D): edit a note, clear (delete) a flag.
+// Remove a single live form flag (Not-sure cancelled / unchecked before submit).
+const removeFormFlag = db.transaction((flag) => {
+  stmt.deleteFormFlag.run({
+    project_id: flag.project_id,
+    field_id: flag.field_id || '',
+    product_index: flag.product_index == null ? null : flag.product_index,
+  });
+});
+
+// Flag review screen: edit the CUSTOMER note, add/edit the INTERNAL note, or clear.
 function updateFlagNote(id, note) {
   const res = stmt.updateFlagNote.run({ id: Number(id), note: String(note == null ? '' : note) });
+  return res.changes > 0;
+}
+function updateInternalNote(id, internal_note) {
+  const res = stmt.updateInternalNote.run({ id: Number(id), internal_note: String(internal_note == null ? '' : internal_note) });
   return res.changes > 0;
 }
 function clearFlag(id) {
@@ -284,9 +309,11 @@ module.exports = {
   updateStatus,
   saveFlag,
   saveFormFlag,
+  removeFormFlag,
   getFlags,
   getFlag,
   updateFlagNote,
+  updateInternalNote,
   clearFlag,
   VALID_STATUSES,
   COMPLETED_STATUS,

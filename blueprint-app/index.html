@@ -930,7 +930,8 @@ textarea.fe-input { min-height: 72px; resize: vertical; font-family: 'Manrope', 
 .in-conditional { animation:in-reveal .26s ease; }
 /* flag popover */
 .in-flagpop { grid-column:1/-1; border:1px solid var(--in-flag); background:var(--in-flag-soft); border-radius:10px; padding:12px 14px; margin-top:8px; animation:in-reveal .2s ease; }
-.in-flagpop .fp-title { font-size:11px; font-weight:800; color:var(--in-flag); text-transform:uppercase; letter-spacing:.05em; margin-bottom:6px; }
+.in-flagpop .fp-title { font-size:11px; font-weight:800; color:var(--in-flag); text-transform:uppercase; letter-spacing:.05em; margin-bottom:4px; }
+.in-flagpop .fp-prompt { font-size:12px; color:#92400E; margin-bottom:7px; line-height:1.45; }
 .in-flagpop textarea { width:100%; background:#fff; border:1px solid var(--in-border); border-radius:8px; padding:8px 10px; color:var(--in-text); font-family:inherit; font-size:12.5px; resize:vertical; min-height:50px; }
 .in-flagpop textarea:focus { outline:none; border-color:var(--in-flag); }
 .in-flagpop .fp-actions { display:flex; gap:8px; margin-top:8px; }
@@ -2865,7 +2866,8 @@ function inVisible(f, answers) {
   return true;
 }
 function inNewProduct(n) { return { name: 'Product ' + n, answers: {}, bom: [{}], ns: {}, flags: {} }; }
-let IN_FLAG_OPEN = null;   // scope|key of the currently-open flag popover (ephemeral UI)
+let IN_FLAG_OPEN = null;   // scope|key of the currently-open popup (ephemeral UI)
+let IN_FLAG_MODE = 'flag'; // 'ns' = Not-sure notes popup · 'flag' = manual ⚑ flag popover
 function inNsMap(scope) { return scope === 'project' || scope === 'o' ? IN_STATE.nsO : IN_STATE.products[IN_STATE.active].ns; }
 
 function inInit() {
@@ -2915,30 +2917,69 @@ function inSave() {
 /* ── Not sure — customer flags a field for the Sojo team to review with them.
    A Not-sure field counts as answered for completion; it surfaces in the
    customer summary, the Internal Review follow-up list, and the payload. ── */
+/* ── "Not sure" — selecting it opens a notes popup; the note rides on the flag.
+   Save keeps the selection; Cancel undoes it; un-checking clears note + flag. ── */
 function inToggleNS(scope, id) {
   const ns = inNsMap(scope);
-  if (ns[id]) { delete ns[id]; }
-  else { ns[id] = true; flPush(scope, id); }   // Not sure auto-creates a flag (Part C)
-  inSave(); inRender();
+  if (ns[id]) {                                   // un-check → clear note + remove flag
+    delete ns[id];
+    inSave(); flPushRemove(scope, id);
+    if (IN_FLAG_OPEN === inFlagKey(scope, id)) IN_FLAG_OPEN = null;
+    inRender();
+  } else {                                        // select → mark, write flag, open notes popup
+    ns[id] = { note: '' };
+    inSave(); flPush(scope, id);
+    IN_FLAG_MODE = 'ns'; IN_FLAG_OPEN = inFlagKey(scope, id);
+    inRender();
+    const ta = document.getElementById('inFlagNote'); if (ta) ta.focus();
+  }
 }
 
-/* ── flag popover (Part C) — every field has a ⚑ to flag it with a reason ── */
+/* ── popup markup + handlers (shared by the Not-sure popup and the ⚑ flag) ── */
 function inFlagKey(scope, key) { return scope + '|' + key; }
-function inOpenFlag(scope, key) { IN_FLAG_OPEN = inFlagKey(scope, key); inRender(); }
-function inCloseFlag() { IN_FLAG_OPEN = null; inRender(); }
+function inOpenFlag(scope, key) { IN_FLAG_MODE = 'flag'; IN_FLAG_OPEN = inFlagKey(scope, key); inRender(); }
+function inCloseFlag(scope, key) {
+  // Cancel on the Not-sure popup undoes the selection so the field isn't left half-set.
+  if (IN_FLAG_MODE === 'ns' && scope != null) {
+    const ns = inNsMap(scope); delete ns[key];
+    inSave(); flPushRemove(scope, key);
+  }
+  IN_FLAG_OPEN = null; inRender();
+}
 function inSaveFlag(scope, key) {
   const ta = document.getElementById('inFlagNote');
-  flSave(scope, key, ta ? ta.value : '');
-  IN_FLAG_OPEN = null; inRender(); feToast('⚑ Field flagged for review');
+  const note = ta ? ta.value : '';
+  if (IN_FLAG_MODE === 'ns') {                     // store the note on the Not-sure entry
+    inNsMap(scope)[key] = { note: note };
+    inSave(); flPush(scope, key);
+    IN_FLAG_OPEN = null; inRender(); feToast('🤔 Noted — we’ll follow up');
+  } else {                                         // manual ⚑ flag
+    flSave(scope, key, note);
+    IN_FLAG_OPEN = null; inRender(); feToast('⚑ Field flagged for review');
+  }
 }
 function inClearFlag(scope, key) {
   flClear(scope, key);
   IN_FLAG_OPEN = null; inRender(); feToast('Flag cleared');
 }
-// Popover markup for a field, shown inline when its ⚑ is open.
+// Inline popup shown under a field when its Not-sure / ⚑ popup is open.
 function inFlagPopHTML(scope, key, store, ns) {
   if (IN_FLAG_OPEN !== inFlagKey(scope, key)) return '';
+  const isNs = IN_FLAG_MODE === 'ns';
   const note = flNoteFor(scope, key, store, ns);
+  if (isNs) {
+    const needNote = (typeof NS_NOTE_REQUIRED !== 'undefined' && NS_NOTE_REQUIRED);
+    const saveDisabled = needNote && !String(note).trim() ? ' disabled' : '';
+    return `<div class="in-flagpop">
+      <div class="fp-title">🤔 Not sure?</div>
+      <div class="fp-prompt">${inEsc(typeof NS_PROMPT !== 'undefined' ? NS_PROMPT : "Tell us why — this helps our team follow up.")}</div>
+      <textarea id="inFlagNote" placeholder="Optional — what made this hard to answer?"${needNote ? ` oninput="var b=document.getElementById('inFlagSaveBtn');b.disabled=!this.value.trim()"` : ''}>${inEsc(note)}</textarea>
+      <div class="fp-actions">
+        <button type="button" id="inFlagSaveBtn" class="fp-save"${saveDisabled} onclick="inSaveFlag('${scope}','${key}')">Save</button>
+        <button type="button" class="fp-cancel" onclick="inCloseFlag('${scope}','${key}')">Cancel</button>
+      </div>
+    </div>`;
+  }
   return `<div class="in-flagpop">
     <div class="fp-title">⚑ Reason for flag</div>
     <textarea id="inFlagNote" placeholder="Why does this need Sojo's review?">${inEsc(note)}</textarea>
