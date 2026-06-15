@@ -50,17 +50,42 @@ The same HTML can run as a hosted web app that also **records every project
 submitted through the intake form** in a SQLite database. The backend lives in
 [`blueprint-app/`](blueprint-app/).
 
+### Access model — no login, one unlisted URL
+
+There is **no password and no login screen** anywhere. The only public page is
+the customer intake form. Everything internal lives under a single **unlisted
+base path**, `/projects-<random-slug>`, and **that URL is the only barrier** —
+anyone who has it can view and edit. The slug is generated once, kept stable
+across redeploys (persisted on the data volume), and **printed in the boot
+logs** every time the server starts:
+
+```
+════════════════════════════════════════════════════════════════
+Blueprint web app listening on port 3000
+Public intake form:   /intake
+UNLISTED dashboard:   /projects-a1b2c3d4
+   (open <your-domain>/projects-a1b2c3d4 — this URL is the only barrier)
+════════════════════════════════════════════════════════════════
+```
+
+Open your service's **Deploy Logs** in Railway to read the current dashboard
+path. (It's also written to `data/dashboard-url.txt` on the volume.)
+
 ### Routes
 
 | Route | What it serves | Access |
 |---|---|---|
 | `/intake` | Customer intake form (form only, self-contained) | **Public** |
-| `/projects` | Dashboard of every submission (search, sort, status) | Password |
-| `/projects/:id` | One submission: all fields, field→NetSuite mapping, flagged fields + notes | Password |
-| `/app` | The full Blueprint app | Password |
-| `/presentation` | Standalone slide deck | Password |
-| `/source-map`, `/decision-tree` | Redirect into `/app`'s current Source Map / Decision Tree views | Password |
-| `/` | Redirects to `/projects` | — |
+| `/` | Redirects to `/intake` | Public |
+| `<base>` | Dashboard of every submission (search, sort, status) | Unlisted URL |
+| `<base>/p/:id` | One submission: all fields, field→NetSuite mapping, flagged fields + notes | Unlisted URL |
+| `<base>/app` | The full Blueprint app | Unlisted URL |
+| `<base>/presentation` | Standalone slide deck | Unlisted URL |
+| `<base>/source-map`, `<base>/decision-tree` | Redirect into the app's current Source Map / Decision Tree views | Unlisted URL |
+
+…where `<base>` is `/projects-<slug>` from the boot logs. The plain `/projects`
+path is **not** a route — it returns 404, so the dashboard isn't at a guessable
+URL.
 
 The intake form **POSTs its full payload to `/api/submissions`** on submit. The
 server stores the submission plus every flagged field — both the customer's
@@ -78,13 +103,14 @@ a one-file change.
 ```powershell
 cd blueprint-app
 npm install
-$env:ADMIN_PASSWORD = "pick-a-password"   # gates /projects and the internal views
 npm start                                  # http://localhost:3000
 ```
 
-Copy [`blueprint-app/.env.example`](blueprint-app/.env.example) to `.env` to set
-variables instead. After editing the intake form (`index.html` /
-`intake-data.js`), regenerate the public form page with `npm run build:intake`.
+Watch the console for the `UNLISTED dashboard: /projects-<slug>` line — that's
+your dashboard URL. To pin a fixed slug instead of the generated one, set
+`DASHBOARD_SLUG` (see [`blueprint-app/.env.example`](blueprint-app/.env.example)).
+After editing the intake form (`index.html` / `intake-data.js`), regenerate the
+public form page with `npm run build:intake`.
 
 ### Deploy to Railway
 
@@ -95,17 +121,20 @@ variables instead. After editing the intake form (`index.html` /
    ⚠️ **Without this volume, the SQLite database is wiped on every redeploy —
    you lose every submitted project.** The volume is what makes the data
    persist. Mount path must be exactly `/app/data` (the app writes to
-   `./data/projects.db`, and the root directory becomes `/app`).
-5. Add a **Variable** `ADMIN_PASSWORD` = a strong password (gates the dashboard
-   and internal views; the `/intake` form stays public).
-6. **Generate a public domain** (service → Settings → Networking → Generate
-   Domain). Share `https://<your-domain>/intake` with customers; use
-   `/projects` yourself.
+   `./data/projects.db`, and the root directory becomes `/app`). The volume
+   also keeps your dashboard slug stable across redeploys.
+5. **Generate a public domain** (service → Settings → Networking → Generate
+   Domain).
+6. **Read the dashboard URL from the Deploy Logs** — find the
+   `UNLISTED dashboard: /projects-<slug>` line. Your dashboard is
+   `https://<your-domain>/projects-<slug>`. Share `https://<your-domain>/intake`
+   with customers; keep the dashboard URL to yourself (it's the only barrier).
 
-Railway auto-detects Node from [`blueprint-app/package.json`](blueprint-app/package.json)
-(`npm start` → `node server.js`) and reads
-[`blueprint-app/railway.json`](blueprint-app/railway.json). The server binds to
-`process.env.PORT`, which Railway sets automatically — never hardcode it.
+There is no password to set. Railway auto-detects Node from
+[`blueprint-app/package.json`](blueprint-app/package.json) (`npm start` →
+`node server.js`) and reads [`blueprint-app/railway.json`](blueprint-app/railway.json).
+The server binds to `process.env.PORT`, which Railway sets automatically — never
+hardcode it.
 
 > **Note:** `node_modules/` and `data/*.db` are gitignored — dependencies and
 > the database are never committed. `.env.example` is committed; `.env` is not.

@@ -1,56 +1,62 @@
 /* server.js — Blueprint web app (Express + SQLite).
    ─────────────────────────────────────────────────────────────────────────
-   Serves the existing HTML at clean routes, accepts intake-form submissions,
-   and provides a password-gated project-tracking dashboard.
+   Serves the existing HTML and accepts intake-form submissions.
 
-   Routes
-     /              → redirect to /projects (the dashboard)
-     /intake        → customer intake form (PUBLIC, form-only)
-     /app           → full Blueprint app           (gated)
-     /presentation  → standalone slide deck        (gated)
-     /source-map    → redirect into /app (Source Map view)   (gated)
-     /decision-tree → redirect into /app (Decision Tree view)(gated)
-     /projects      → dashboard of all submissions  (gated)
-     /projects/:id  → submission detail             (gated)
-   API
-     POST  /api/submissions          (PUBLIC) — the form submits here
-     GET   /api/projects             (gated)
-     GET   /api/projects/:id         (gated)
-     PATCH /api/projects/:id/status  (gated)
-     POST  /api/projects/:id/flags   (gated)
+   There is NO login anywhere. The only public path is the customer intake
+   form. Everything internal (the dashboard, its data API, the full app, the
+   slide deck) lives under ONE unlisted base path — /projects-<random-slug> —
+   and the unlisted URL is the only barrier. The slug is generated once,
+   persisted on the data volume, and printed to the boot logs.
+
+   Public routes
+     /              → redirect to /intake
+     /intake        → customer intake form (form-only, self-contained)
+     POST /api/submissions          → the form submits here
+   Unlisted base = /projects-<slug>  (printed in the boot logs)
+     <base>                         → dashboard of all submissions
+     <base>/p/:id                   → submission detail
+     <base>/app, <base>/app/        → full Blueprint app
+     <base>/presentation            → standalone slide deck
+     <base>/source-map              → redirect into the app's Source Map view
+     <base>/decision-tree           → redirect into the app's Decision Tree view
+     GET   <base>/api/projects
+     GET   <base>/api/projects/:id
+     PATCH <base>/api/projects/:id/status
+     POST  <base>/api/projects/:id/flags
 */
 'use strict';
 
 const path = require('path');
+const fs = require('fs');
+const crypto = require('crypto');
 const express = require('express');
 const db = require('./db');
 
 const app = express();
 app.set('strict routing', true);                  // so '/app' and '/app/' are distinct routes
 const PORT = process.env.PORT || 3000;            // Railway sets PORT — never hardcode.
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
 
 app.use(express.json({ limit: '2mb' }));
 
 const PUBLIC_DIR = path.join(__dirname, 'public');
+const DATA_DIR = path.join(__dirname, 'data');
 const APP_FILES = { 'data.js': 1, 'fields-data.js': 1, 'intake-data.js': 1 };
 
-/* ── access control: HTTP Basic auth, password from ADMIN_PASSWORD ────────── */
-function adminAuth(req, res, next) {
-  if (!ADMIN_PASSWORD) {
-    res.status(500).send('Server not configured: set the ADMIN_PASSWORD environment variable.');
-    return;
-  }
-  const header = req.headers.authorization || '';
-  const [scheme, encoded] = header.split(' ');
-  if (scheme === 'Basic' && encoded) {
-    const decoded = Buffer.from(encoded, 'base64').toString('utf8');
-    const pass = decoded.slice(decoded.indexOf(':') + 1);   // username ignored
-    if (pass === ADMIN_PASSWORD) return next();
-  }
-  res.set('WWW-Authenticate', 'Basic realm="Blueprint internal", charset="UTF-8"');
-  res.status(401).send('Authentication required.');
+/* ── unlisted dashboard path ───────────────────────────────────────────────
+   No password — the hard-to-guess URL is the barrier. The slug is generated
+   once and persisted to the data volume so it stays stable across redeploys
+   (override with the DASHBOARD_SLUG env var if you want a fixed value).      */
+function resolveSlug() {
+  const fromEnv = (process.env.DASHBOARD_SLUG || '').replace(/[^A-Za-z0-9_-]/g, '');
+  if (fromEnv) return fromEnv;
+  const slugFile = path.join(DATA_DIR, '.dashboard-slug');
+  try { const s = fs.readFileSync(slugFile, 'utf8').trim(); if (s) return s; } catch (e) { /* first boot */ }
+  const slug = crypto.randomBytes(4).toString('hex');           // 8 hex chars
+  try { fs.mkdirSync(DATA_DIR, { recursive: true }); fs.writeFileSync(slugFile, slug, 'utf8'); } catch (e) { /* ephemeral fallback */ }
+  return slug;
 }
+const SLUG = resolveSlug();
+const DASH = '/projects-' + SLUG;                 // unlisted base for everything internal
 
 const esc = s => String(s == null ? '' : s)
   .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -58,6 +64,9 @@ const esc = s => String(s == null ? '' : s)
 /* ════════════════════════════════════════════════════════════════════════
    PUBLIC ROUTES
    ════════════════════════════════════════════════════════════════════════ */
+
+// Bare domain → the public form (never reveals the unlisted dashboard).
+app.get('/', (req, res) => res.redirect('/intake'));
 
 // Customer intake form — the only public HTML. Self-contained (no app assets).
 app.get('/intake', (req, res) => res.sendFile(path.join(PUBLIC_DIR, 'intake.html')));
@@ -78,38 +87,38 @@ app.post('/api/submissions', (req, res) => {
 });
 
 /* ════════════════════════════════════════════════════════════════════════
-   GATED HTML VIEWS  (internal — confidential content)
+   INTERNAL VIEWS  (no login — reachable only via the unlisted base path)
    ════════════════════════════════════════════════════════════════════════ */
 
 // Full Blueprint app (served from source so no build step is needed at runtime).
-app.get('/app', adminAuth, (req, res) => {
+app.get(DASH + '/app', (req, res) => {
   const qs = req.originalUrl.includes('?') ? req.originalUrl.slice(req.originalUrl.indexOf('?')) : '';
-  res.redirect('/app/' + qs);                       // trailing slash → relative asset URLs resolve under /app/
+  res.redirect(DASH + '/app/' + qs);                // trailing slash → relative asset URLs resolve under .../app/
 });
-app.get('/app/', adminAuth, (req, res) => res.sendFile(path.join(__dirname, 'index.html')));
-app.get('/app/:file', adminAuth, (req, res, next) => {
+app.get(DASH + '/app/', (req, res) => res.sendFile(path.join(__dirname, 'index.html')));
+app.get(DASH + '/app/:file', (req, res, next) => {
   if (!APP_FILES[req.params.file]) return next();
   res.sendFile(path.join(__dirname, req.params.file));
 });
 
-app.get('/presentation', adminAuth, (req, res) => res.sendFile(path.join(PUBLIC_DIR, 'presentation.html')));
+app.get(DASH + '/presentation', (req, res) => res.sendFile(path.join(PUBLIC_DIR, 'presentation.html')));
 
 // Legacy routes now point at the app's current, newer views.
-app.get('/source-map', adminAuth, (req, res) => res.redirect('/app/?view=map'));
-app.get('/decision-tree', adminAuth, (req, res) => res.redirect('/app/?view=tree'));
+app.get(DASH + '/source-map', (req, res) => res.redirect(DASH + '/app/?view=map'));
+app.get(DASH + '/decision-tree', (req, res) => res.redirect(DASH + '/app/?view=tree'));
 
 /* ════════════════════════════════════════════════════════════════════════
-   GATED API
+   PROJECT DATA API  (under the unlisted base — no login)
    ════════════════════════════════════════════════════════════════════════ */
-app.get('/api/projects', adminAuth, (req, res) => res.json(db.listProjects()));
+app.get(DASH + '/api/projects', (req, res) => res.json(db.listProjects()));
 
-app.get('/api/projects/:id', adminAuth, (req, res) => {
+app.get(DASH + '/api/projects/:id', (req, res) => {
   const p = db.getProject(req.params.id);
   if (!p) return res.status(404).json({ ok: false, error: 'Not found' });
   res.json(p);
 });
 
-app.patch('/api/projects/:id/status', adminAuth, (req, res) => {
+app.patch(DASH + '/api/projects/:id/status', (req, res) => {
   try {
     const ok = db.updateStatus(req.params.id, (req.body || {}).status);
     if (!ok) return res.status(404).json({ ok: false, error: 'Not found' });
@@ -119,7 +128,7 @@ app.patch('/api/projects/:id/status', adminAuth, (req, res) => {
   }
 });
 
-app.post('/api/projects/:id/flags', adminAuth, (req, res) => {
+app.post(DASH + '/api/projects/:id/flags', (req, res) => {
   try {
     db.saveFlag({ ...(req.body || {}), project_id: req.params.id });
     res.json({ ok: true });
@@ -129,23 +138,28 @@ app.post('/api/projects/:id/flags', adminAuth, (req, res) => {
 });
 
 /* ════════════════════════════════════════════════════════════════════════
-   GATED DASHBOARD  (server-rendered, dark theme to match the app)
+   DASHBOARD  (server-rendered, dark theme — reachable only at the unlisted base)
    ════════════════════════════════════════════════════════════════════════ */
-app.get('/', (req, res) => res.redirect('/projects'));
-
-app.get('/projects', adminAuth, (req, res) => {
+app.get(DASH, (req, res) => {
   res.type('html').send(renderDashboard(db.listProjects()));
 });
 
-app.get('/projects/:id', adminAuth, (req, res) => {
+app.get(DASH + '/p/:id', (req, res) => {
   const p = db.getProject(req.params.id);
-  if (!p) return res.status(404).type('html').send(shell('Not found', '<div class="wrap"><p>No project <code>' + esc(req.params.id) + '</code>. <a href="/projects">← Back</a></p></div>'));
+  if (!p) return res.status(404).type('html').send(shell('Not found', '<div class="wrap"><p>No project <code>' + esc(req.params.id) + '</code>. <a href="' + DASH + '">← Back</a></p></div>'));
   res.type('html').send(renderDetail(p));
 });
 
 app.listen(PORT, () => {
+  const line = '═'.repeat(64);
+  console.log(line);
   console.log(`Blueprint web app listening on port ${PORT}`);
-  if (!ADMIN_PASSWORD) console.warn('WARNING: ADMIN_PASSWORD is not set — gated routes will return 500 until it is.');
+  console.log(`Public intake form:   /intake`);
+  console.log(`UNLISTED dashboard:   ${DASH}`);
+  console.log(`   (open <your-domain>${DASH} — this URL is the only barrier)`);
+  console.log(line);
+  // Best-effort persistent record on the data volume, for easy retrieval.
+  try { fs.writeFileSync(path.join(DATA_DIR, 'dashboard-url.txt'), DASH + '\n', 'utf8'); } catch (e) { /* ignore */ }
 });
 
 /* ════════════════════════════════════════════════════════════════════════
@@ -207,7 +221,7 @@ function shell(title, body, extraHead) {
 <style>${STYLES}</style>${extraHead || ''}</head><body>
 <div class="topbar"><div class="logo">S</div><div><h1>Sojo Industries · Blueprint</h1>
 <div class="sub">Project intake tracking</div></div>
-<div class="links"><a href="/projects">Projects</a><a href="/intake" target="_blank">Intake form ↗</a><a href="/app/" target="_blank">Blueprint app ↗</a></div></div>
+<div class="links"><a href="${DASH}">Projects</a><a href="/intake" target="_blank">Intake form ↗</a><a href="${DASH}/app/" target="_blank">Blueprint app ↗</a></div></div>
 ${body}</body></html>`;
 }
 
@@ -220,7 +234,7 @@ function renderDashboard(projects) {
     <tr data-customer="${esc((p.customer_name || '').toLowerCase())}"
         data-name="${esc((p.project_name || '').toLowerCase())}"
         data-status="${esc(p.status)}" data-date="${esc(p.updated_at)}">
-      <td><a href="/projects/${encodeURIComponent(p.project_id)}">${esc(p.project_name)}</a><br><code>${esc(p.project_id)}</code></td>
+      <td><a href="${DASH}/p/${encodeURIComponent(p.project_id)}">${esc(p.project_name)}</a><br><code>${esc(p.project_id)}</code></td>
       <td>${esc(p.customer_name) || '<span style="color:var(--dim)">—</span>'}</td>
       <td>${esc((p.updated_at || '').slice(0, 10))}</td>
       <td><select class="statussel" onchange="setStatus('${esc(p.project_id)}', this.value)">${statusOptions(p.status)}</select></td>
@@ -268,8 +282,9 @@ function renderDashboard(projects) {
       });
       rows.forEach(function (r) { tbody.appendChild(r); });
     }
+    var BASE = ${JSON.stringify(DASH)};
     function setStatus(id, status) {
-      fetch('/api/projects/' + encodeURIComponent(id) + '/status', {
+      fetch(BASE + '/api/projects/' + encodeURIComponent(id) + '/status', {
         method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status: status })
       }).then(function (r) { if (!r.ok) alert('Could not update status'); });
     }
@@ -306,7 +321,7 @@ function renderDetail(p) {
   }).join('');
 
   const body = `<div class="wrap">
-    <p><a href="/projects">← All projects</a></p>
+    <p><a href="${DASH}">← All projects</a></p>
     <h2 style="font-size:20px;font-weight:800;margin:10px 0 2px">${esc(p.project_name)}</h2>
     <div class="meta">
       <span>Project <b><code>${esc(p.project_id)}</code></b></span>
@@ -325,8 +340,9 @@ function renderDetail(p) {
     ${productCards}
   </div>
   <script>
+    var BASE = ${JSON.stringify(DASH)};
     function setStatus(id, status) {
-      fetch('/api/projects/' + encodeURIComponent(id) + '/status', {
+      fetch(BASE + '/api/projects/' + encodeURIComponent(id) + '/status', {
         method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status: status })
       }).then(function (r) { if (!r.ok) alert('Could not update status'); });
     }
