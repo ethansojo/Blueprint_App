@@ -66,8 +66,11 @@ ${toastCss}
 
 ${inCss}
 
-/* standalone: the form IS the page */
-.in-stage { min-height: 100vh; }
+/* standalone: the form IS the page — contain to the viewport so only the
+   card body scrolls (Back/Next stay pinned, no page-length scroll). */
+html, body { height: 100%; }
+.in-stage { height: 100vh; overflow: hidden; }
+.in-shell { height: 100vh; min-height: 0; }
 </style>
 </head>
 <body>

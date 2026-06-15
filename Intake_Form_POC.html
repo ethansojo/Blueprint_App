@@ -41,124 +41,173 @@ body { background: var(--bg); color: var(--text); font-family: 'Manrope', sans-s
 .fe-toast { position: fixed; bottom: 20px; right: 20px; z-index: 600; background: #15151C; border: 1px solid var(--c-new); color: var(--c-new); padding: 10px 16px; border-radius: 8px; font-size: 12.5px; font-weight: 700; opacity: 0; transform: translateY(8px); transition: opacity 0.2s, transform 0.2s; pointer-events: none; }
 .fe-toast.show { opacity: 1; transform: translateY(0); }
 
-/* ─── IntakeForm.jsx — customer intake POC, restyled to match the app's
-   dark theme. EVERY rule stays scoped under .in-stage / .in-* so nothing
-   leaks in either direction. ── */
-.in-stage { background: var(--bg); color: var(--text); min-height: calc(100vh - 112px); padding: 28px 20px 64px; font-family: 'Manrope', sans-serif; }
-.in-shell { max-width: 1060px; margin: 0 auto; }
-.in-header { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 18px 22px; margin-bottom: 14px; display: flex; flex-wrap: wrap; gap: 14px; align-items: center; }
-.in-logo { width: 38px; height: 38px; border-radius: 9px; border: 1.5px solid var(--c-bp); color: var(--c-bp); background: rgba(90,156,216,0.08); font-weight: 800; font-size: 17px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-family: 'JetBrains Mono', monospace; }
-.in-head-text { flex: 1; min-width: 200px; }
-.in-head-text h1 { font-size: 18px; font-weight: 800; color: var(--text); margin: 0; }
-.in-head-text p { font-size: 12px; color: var(--muted); margin: 2px 0 0; }
-.in-head-right { display: flex; flex-direction: column; align-items: flex-end; gap: 5px; }
-.in-saved { font-size: 11px; color: var(--muted); }
-.in-share { display: flex; gap: 6px; }
-.in-share button { background: transparent; border: 1px solid var(--border); border-radius: 7px; padding: 6px 12px; font-family: 'Manrope', sans-serif; font-size: 11.5px; font-weight: 700; color: var(--c-bp); cursor: pointer; }
-.in-share button:hover { background: rgba(90,156,216,0.1); border-color: var(--c-bp); }
-.in-poc-note { font-size: 11px; color: #E8D9A0; background: rgba(255,224,102,0.05); border: 1px solid rgba(255,224,102,0.2); border-radius: 8px; padding: 7px 12px; margin-bottom: 14px; }
-/* overall progress */
-.in-progress-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 12px 18px; margin-bottom: 14px; }
-.in-progress-lbl { display: flex; justify-content: space-between; font-size: 11px; font-weight: 700; color: var(--muted); margin-bottom: 6px; }
-.in-bar { height: 8px; background: #15151C; border: 1px solid var(--border); border-radius: 4px; overflow: hidden; }
-.in-bar i { display: block; height: 100%; background: var(--accent); border-radius: 4px; transition: width 0.3s; }
+/* ─── IntakeForm.jsx — customer intake form. Polished light theme, contained
+   one-section-per-screen layout. EVERY rule scoped under .in-stage / .in-* so
+   nothing leaks into the dark internal app. Colors are scoped CSS variables. ── */
+.in-stage {
+  --in-surface:#F7F8FA; --in-card:#FFFFFF; --in-border:#E3E6EB;
+  --in-text:#1A1D23; --in-muted:#6B7280;
+  --in-primary:#1E5FCC; --in-primary-hover:#1A52B0; --in-primary-soft:rgba(30,95,204,0.10);
+  --in-ok:#16A34A; --in-flag:#D97706; --in-flag-soft:rgba(217,119,6,0.10); --in-error:#DC2626;
+  --in-shadow:0 1px 3px rgba(0,0,0,0.08), 0 4px 12px rgba(0,0,0,0.04);
+  background:var(--in-surface); color:var(--in-text); font-family:'Manrope',sans-serif; min-height:100vh;
+}
+.in-shell { display:flex; flex-direction:column; min-height:100vh; max-width:1180px; margin:0 auto; width:100%; }
+/* slim top progress */
+.in-top { flex-shrink:0; height:4px; background:var(--in-border); position:relative; }
+.in-top i { position:absolute; left:0; top:0; bottom:0; background:var(--in-primary); border-radius:0 3px 3px 0; transition:width .35s ease; }
+/* header */
+.in-header { flex-shrink:0; display:flex; flex-wrap:wrap; gap:14px; align-items:center; padding:16px 24px 12px; }
+.in-logo { width:38px; height:38px; border-radius:9px; background:var(--in-primary); color:#fff; font-weight:800; font-size:17px; display:flex; align-items:center; justify-content:center; flex-shrink:0; font-family:'JetBrains Mono',monospace; box-shadow:var(--in-shadow); }
+.in-head-text { flex:1; min-width:200px; }
+.in-head-text h1 { font-size:17px; font-weight:800; color:var(--in-text); margin:0; }
+.in-head-text p { font-size:12px; color:var(--in-muted); margin:2px 0 0; }
+.in-head-right { display:flex; flex-direction:column; align-items:flex-end; gap:5px; }
+.in-saved { font-size:11px; color:var(--in-muted); }
+.in-share { display:flex; gap:6px; }
+.in-share button { background:#fff; border:1px solid var(--in-border); border-radius:7px; padding:6px 12px; font-family:inherit; font-size:11.5px; font-weight:700; color:var(--in-primary); cursor:pointer; transition:background .15s,border-color .15s; }
+.in-share button:hover { background:var(--in-primary-soft); border-color:var(--in-primary); }
+.in-poc-note { flex-shrink:0; margin:0 24px 10px; font-size:11px; color:#92400E; background:#FEF3C7; border:1px solid #FDE68A; border-radius:8px; padding:7px 12px; }
 /* product pills */
-.in-products { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
-.in-prod-pill { display: flex; align-items: center; gap: 7px; background: var(--surface); border: 1.5px solid var(--border); border-radius: 20px; padding: 7px 14px; font-size: 12px; font-weight: 700; color: var(--muted); cursor: pointer; }
-.in-prod-pill.active { border-color: var(--accent); background: rgba(255,224,102,0.08); color: var(--accent); }
-.in-prod-pill .pct { font-size: 10px; font-weight: 800; color: #1A1500; background: var(--dim); border-radius: 9px; padding: 1px 7px; }
-.in-prod-pill.active .pct { background: var(--accent); }
-.in-prod-pill .px { color: #E07A7A; font-weight: 800; padding: 0 2px; }
-.in-prod-pill .pedit { color: var(--dim); }
-.in-prod-add { background: transparent; border: 1.5px dashed var(--dim); border-radius: 20px; padding: 7px 16px; font-family: 'Manrope', sans-serif; font-size: 12px; font-weight: 700; color: var(--accent); cursor: pointer; }
-.in-prod-add:hover { background: rgba(255,224,102,0.06); border-color: var(--accent); }
-/* layout: section nav + content */
-.in-body { display: grid; grid-template-columns: 230px 1fr; gap: 14px; align-items: start; }
-@media (max-width: 760px) { .in-body { grid-template-columns: 1fr; } }
-.in-secnav { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 8px; position: sticky; top: 170px; }
-.in-secnav button { display: flex; align-items: center; gap: 8px; width: 100%; text-align: left; background: transparent; border: none; border-radius: 8px; padding: 9px 10px; font-family: 'Manrope', sans-serif; font-size: 12px; font-weight: 600; color: var(--muted); cursor: pointer; }
-.in-secnav button:hover { background: rgba(255,255,255,0.04); color: var(--text); }
-.in-secnav button.active { background: rgba(255,224,102,0.1); color: var(--accent); font-weight: 800; }
-.in-secnav .chk { width: 16px; flex-shrink: 0; font-size: 11px; color: var(--c-new); text-align: center; }
-.in-secnav .chk.empty { color: var(--dim); }
-.in-card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 22px 26px; }
-.in-sec-title { font-size: 17px; font-weight: 800; color: var(--text); margin-bottom: 4px; }
-.in-sec-desc { font-size: 12.5px; color: var(--muted); margin-bottom: 18px; line-height: 1.55; }
-.in-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px 18px; }
-@media (max-width: 640px) { .in-grid { grid-template-columns: 1fr; } }
-.in-field { display: flex; flex-direction: column; gap: 4px; }
-.in-field.full { grid-column: 1 / -1; }
-.in-field.ns-on .in-input, .in-field.ns-on .in-select, .in-field.ns-on .in-textarea, .in-field.ns-on .in-checks { opacity: 0.4; }
-.in-label-row { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
-.in-label { font-size: 12px; font-weight: 700; color: var(--text); }
-.in-label .req { color: #E05050; }
-.in-ns { flex-shrink: 0; background: transparent; border: 1px solid var(--border); border-radius: 12px; padding: 2px 9px; font-family: 'Manrope', sans-serif; font-size: 10px; font-weight: 700; color: var(--dim); cursor: pointer; transition: all 0.15s; }
-.in-ns:hover { color: var(--c-flag); border-color: rgba(255,144,64,0.4); }
-.in-ns.on { color: var(--c-flag); border-color: rgba(255,144,64,0.5); background: rgba(255,144,64,0.1); }
-.in-helper { font-size: 11px; color: var(--muted); }
-.in-input, .in-select, .in-textarea { width: 100%; background: rgba(255,255,255,0.04); border: 1px solid var(--border); border-radius: 8px; padding: 9px 11px; font-family: 'Manrope', sans-serif; font-size: 13px; color: var(--text); }
-.in-input:focus, .in-select:focus, .in-textarea:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-dim); }
-.in-select { background-color: #15151A; }
-.in-textarea { min-height: 70px; resize: vertical; }
-.in-checks { display: flex; flex-wrap: wrap; gap: 8px; }
-.in-checks label { display: flex; align-items: center; gap: 6px; background: rgba(255,255,255,0.03); border: 1px solid var(--border); border-radius: 16px; padding: 5px 12px; font-size: 12px; color: var(--text); cursor: pointer; }
-.in-checks input { accent-color: #2A5FA5; }
-.in-file { border: 1.5px dashed var(--dim); border-radius: 8px; padding: 12px; text-align: center; font-size: 12px; color: var(--muted); background: rgba(255,255,255,0.02); cursor: pointer; }
-.in-file input { display: none; }
-.in-file .fname { color: var(--accent); font-weight: 700; }
-.in-note { grid-column: 1 / -1; font-size: 12px; color: #E8D9A0; background: rgba(255,224,102,0.05); border: 1px solid rgba(255,224,102,0.2); border-radius: 8px; padding: 9px 12px; }
-.in-conditional { animation: in-fade 0.22s ease; }
-@keyframes in-fade { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
-/* BOM rows */
-.in-bom-row { border: 1px solid var(--border); border-radius: 10px; padding: 14px; margin-bottom: 12px; background: #0A0A0E; position: relative; }
-.in-bom-row .rowhdr { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; font-size: 11px; font-weight: 800; color: var(--muted); font-family: 'JetBrains Mono', monospace; letter-spacing: 0.08em; }
-.in-bom-row .rowdel { background: transparent; border: 1px solid rgba(224,122,122,0.4); color: #E07A7A; border-radius: 6px; padding: 3px 10px; font-size: 11px; font-weight: 700; cursor: pointer; font-family: 'Manrope', sans-serif; }
-.in-addrow { background: rgba(255,224,102,0.06); border: 1.5px dashed var(--accent); color: var(--accent); border-radius: 8px; padding: 10px; width: 100%; font-family: 'Manrope', sans-serif; font-size: 12.5px; font-weight: 700; cursor: pointer; margin-bottom: 16px; }
-/* nav + warnings */
-.in-foot { display: flex; justify-content: space-between; margin-top: 20px; gap: 10px; }
-.in-btn { background: var(--accent); color: #1A1500; border: none; border-radius: 8px; padding: 11px 22px; font-family: 'Manrope', sans-serif; font-size: 13px; font-weight: 700; cursor: pointer; }
-.in-btn:hover { background: #FFD840; }
-.in-btn.ghost { background: transparent; color: var(--muted); border: 1px solid var(--border); }
-.in-btn.ghost:hover { color: var(--text); border-color: var(--muted); }
-.in-btn:disabled { background: #3A3A46; color: var(--muted); cursor: not-allowed; }
-.in-warn { background: rgba(224,122,122,0.08); border: 1px solid rgba(224,122,122,0.3); color: #E09080; border-radius: 8px; padding: 9px 12px; font-size: 12px; margin-bottom: 14px; }
-/* review & submit */
-.in-summary-sec { border-bottom: 1px solid var(--border); padding: 10px 0; }
-.in-summary-sec h4 { font-size: 12px; font-weight: 800; color: var(--c-bp); margin: 0 0 6px; display: flex; justify-content: space-between; }
-.in-summary-sec h4 a { font-size: 11px; color: var(--c-flag); cursor: pointer; text-decoration: underline; }
-.in-sum-row { display: flex; justify-content: space-between; gap: 14px; font-size: 12px; padding: 2.5px 0; }
-.in-sum-row .k { color: var(--muted); }
-.in-sum-row .v { color: var(--text); font-weight: 600; text-align: right; }
-.in-confirm { display: flex; gap: 9px; align-items: flex-start; margin: 16px 0; font-size: 12.5px; color: var(--text); }
-.in-confirm input { accent-color: #2A5FA5; margin-top: 2px; }
-.in-done { text-align: center; padding: 30px 16px; }
-.in-done .big { font-size: 40px; }
-.in-done h2 { color: var(--text); }
-.in-done p { color: var(--muted); font-size: 13px; max-width: 520px; margin: 8px auto; line-height: 1.6; }
-/* field action buttons (Not sure + flag) */
-.in-fieldbtns { display: flex; gap: 6px; align-items: center; flex-shrink: 0; }
-.in-flag { background: transparent; border: 1px solid var(--border); border-radius: 12px; padding: 2px 8px; font-family: 'Manrope', sans-serif; font-size: 11px; font-weight: 700; color: var(--dim); cursor: pointer; line-height: 1.4; }
-.in-flag:hover { color: var(--c-flag); border-color: rgba(255,144,64,0.5); }
-.in-flag.on { color: var(--c-flag); border-color: rgba(255,144,64,0.6); background: rgba(255,144,64,0.12); }
-/* required-to-continue highlight */
-.in-field.in-required-missing .in-input,
-.in-field.in-required-missing .in-select,
-.in-field.in-required-missing .in-textarea { border-color: rgba(224,122,122,0.7); box-shadow: 0 0 0 2px rgba(224,122,122,0.12); }
-.in-req-msg { color: #E07A7A; font-size: 11px; font-weight: 700; margin-top: 3px; }
+.in-products { flex-shrink:0; display:flex; flex-wrap:wrap; gap:8px; padding:0 24px 12px; }
+.in-prod-pill { display:flex; align-items:center; gap:7px; background:#fff; border:1.5px solid var(--in-border); border-radius:20px; padding:6px 13px; font-size:12px; font-weight:700; color:var(--in-muted); cursor:pointer; transition:border-color .15s,color .15s; }
+.in-prod-pill.active { border-color:var(--in-primary); color:var(--in-primary); background:var(--in-primary-soft); }
+.in-prod-pill .pct { font-size:10px; font-weight:800; color:#fff; background:var(--in-muted); border-radius:9px; padding:1px 7px; }
+.in-prod-pill.active .pct { background:var(--in-primary); }
+.in-prod-pill .px { color:var(--in-error); font-weight:800; padding:0 2px; }
+.in-prod-pill .pedit { color:var(--in-muted); }
+.in-prod-add { background:transparent; border:1.5px dashed #C7CCD4; border-radius:20px; padding:6px 15px; font-family:inherit; font-size:12px; font-weight:700; color:var(--in-primary); cursor:pointer; }
+.in-prod-add:hover { background:var(--in-primary-soft); border-color:var(--in-primary); }
+/* body: step rail + card */
+.in-body { flex:1; min-height:0; display:grid; grid-template-columns:240px 1fr; gap:16px; padding:0 24px 24px; align-items:stretch; }
+.in-secnav { background:#fff; border:1px solid var(--in-border); border-radius:14px; padding:10px; box-shadow:var(--in-shadow); overflow-y:auto; align-self:stretch; }
+.in-secnav button { display:flex; align-items:center; gap:10px; width:100%; text-align:left; background:transparent; border:none; border-radius:9px; padding:10px 11px; font-family:inherit; font-size:12.5px; font-weight:600; color:var(--in-muted); cursor:pointer; transition:background .15s,color .15s; }
+.in-secnav button:hover { background:#F2F4F7; color:var(--in-text); }
+.in-secnav button.active { background:var(--in-primary-soft); color:var(--in-primary); font-weight:800; }
+.in-dot { width:10px; height:10px; border-radius:50%; flex-shrink:0; background:#CBD2DC; box-shadow:inset 0 0 0 1px rgba(0,0,0,0.05); transition:background .2s; }
+.in-dot-active { background:var(--in-primary); }
+.in-dot-complete { background:var(--in-ok); }
+.in-dot-flagged { background:var(--in-flag); }
+.in-card { background:var(--in-card); border:1px solid var(--in-border); border-radius:16px; box-shadow:var(--in-shadow); display:flex; flex-direction:column; min-height:0; overflow:hidden; animation:in-cardfade .28s ease; }
+.in-card-scroll { flex:1; overflow-y:auto; padding:24px 28px; }
+.in-sec-title { font-size:18px; font-weight:800; color:var(--in-text); margin-bottom:4px; }
+.in-sec-desc { font-size:12.5px; color:var(--in-muted); margin-bottom:20px; line-height:1.55; }
+.in-grid { display:grid; grid-template-columns:1fr 1fr; gap:16px 18px; }
+.in-field { display:flex; flex-direction:column; gap:5px; }
+.in-field.full { grid-column:1/-1; }
+.in-field.ns-on .in-input, .in-field.ns-on .in-select, .in-field.ns-on .in-textarea, .in-field.ns-on .in-checks { opacity:.5; }
+.in-label-row { display:flex; justify-content:space-between; align-items:center; gap:8px; }
+.in-label { font-size:12px; font-weight:700; color:var(--in-text); }
+.in-label .req { color:var(--in-error); }
+.in-fieldbtns { display:flex; gap:6px; align-items:center; flex-shrink:0; }
+.in-ns { flex-shrink:0; background:#fff; border:1px solid var(--in-border); border-radius:12px; padding:2px 9px; font-family:inherit; font-size:10px; font-weight:700; color:var(--in-muted); cursor:pointer; transition:all .15s; }
+.in-ns:hover { color:var(--in-flag); border-color:var(--in-flag); }
+.in-ns.on { color:var(--in-flag); border-color:var(--in-flag); background:var(--in-flag-soft); }
+.in-flag { background:#fff; border:1px solid var(--in-border); border-radius:12px; padding:2px 8px; font-family:inherit; font-size:11px; font-weight:700; color:var(--in-muted); cursor:pointer; line-height:1.4; transition:all .15s; }
+.in-flag:hover { color:var(--in-flag); border-color:var(--in-flag); }
+.in-flag.on { color:var(--in-flag); border-color:var(--in-flag); background:var(--in-flag-soft); }
+.in-helper { font-size:11px; color:var(--in-muted); }
+.in-input, .in-select, .in-textarea { width:100%; background:#fff; border:1px solid var(--in-border); border-radius:9px; padding:10px 12px; font-family:inherit; font-size:13px; color:var(--in-text); transition:border-color .18s, box-shadow .18s; }
+.in-textarea { min-height:74px; resize:vertical; }
+/* state borders: error > flag > ok; focus rule comes later to win on ties */
+.in-field.in-st-ok .in-input, .in-field.in-st-ok .in-select, .in-field.in-st-ok .in-textarea { border-color:var(--in-ok); }
+.in-field.in-st-flag .in-input, .in-field.in-st-flag .in-select, .in-field.in-st-flag .in-textarea { border-color:var(--in-flag); }
+.in-field.in-st-error .in-input, .in-field.in-st-error .in-select, .in-field.in-st-error .in-textarea { border-color:var(--in-error); box-shadow:0 0 0 3px rgba(220,38,38,0.10); }
+.in-field .in-input:focus, .in-field .in-select:focus, .in-field .in-textarea:focus { outline:none; border-color:var(--in-primary); box-shadow:0 0 0 3px var(--in-primary-soft); }
+.in-checks { display:flex; flex-wrap:wrap; gap:8px; }
+.in-checks label { display:flex; align-items:center; gap:6px; background:#fff; border:1px solid var(--in-border); border-radius:16px; padding:6px 12px; font-size:12px; color:var(--in-text); cursor:pointer; transition:border-color .15s; }
+.in-checks label:hover { border-color:var(--in-primary); }
+.in-checks input { accent-color:var(--in-primary); }
+.in-file { border:1.5px dashed #C7CCD4; border-radius:9px; padding:14px; text-align:center; font-size:12px; color:var(--in-muted); background:#FCFCFD; cursor:pointer; }
+.in-file input { display:none; }
+.in-file .fname { color:var(--in-primary); font-weight:700; }
+.in-note { grid-column:1/-1; font-size:12px; color:#92400E; background:#FEF3C7; border:1px solid #FDE68A; border-radius:9px; padding:10px 12px; }
+.in-req-msg { color:var(--in-error); font-size:11px; font-weight:700; margin-top:2px; }
+.in-conditional { animation:in-reveal .26s ease; }
 /* flag popover */
-.in-flagpop { grid-column: 1 / -1; border: 1px solid rgba(255,144,64,0.4); background: rgba(255,144,64,0.06); border-radius: 9px; padding: 11px 13px; margin-top: 8px; }
-.in-flagpop .fp-title { font-size: 11px; font-weight: 800; color: var(--c-flag); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px; }
-.in-flagpop textarea { width: 100%; background: rgba(255,255,255,0.04); border: 1px solid var(--border); border-radius: 7px; padding: 8px 10px; color: var(--text); font-family: 'Manrope', sans-serif; font-size: 12.5px; resize: vertical; min-height: 50px; }
-.in-flagpop textarea:focus { outline: none; border-color: var(--accent); }
-.in-flagpop .fp-actions { display: flex; gap: 8px; margin-top: 8px; }
-.in-flagpop .fp-actions button { border: none; border-radius: 7px; padding: 6px 13px; font-family: 'Manrope', sans-serif; font-size: 12px; font-weight: 700; cursor: pointer; }
-.in-flagpop .fp-save { background: var(--c-flag); color: #1A1000; }
-.in-flagpop .fp-clear { background: transparent; border: 1px solid var(--border); color: var(--muted); }
-.in-flagpop .fp-cancel { background: transparent; border: 1px solid var(--border); color: var(--muted); }
+.in-flagpop { grid-column:1/-1; border:1px solid var(--in-flag); background:var(--in-flag-soft); border-radius:10px; padding:12px 14px; margin-top:8px; animation:in-reveal .2s ease; }
+.in-flagpop .fp-title { font-size:11px; font-weight:800; color:var(--in-flag); text-transform:uppercase; letter-spacing:.05em; margin-bottom:6px; }
+.in-flagpop textarea { width:100%; background:#fff; border:1px solid var(--in-border); border-radius:8px; padding:8px 10px; color:var(--in-text); font-family:inherit; font-size:12.5px; resize:vertical; min-height:50px; }
+.in-flagpop textarea:focus { outline:none; border-color:var(--in-flag); }
+.in-flagpop .fp-actions { display:flex; gap:8px; margin-top:8px; }
+.in-flagpop .fp-actions button { border:none; border-radius:8px; padding:7px 14px; font-family:inherit; font-size:12px; font-weight:700; cursor:pointer; }
+.in-flagpop .fp-save { background:var(--in-flag); color:#fff; }
+.in-flagpop .fp-clear { background:#fff; border:1px solid var(--in-border); color:var(--in-muted); }
+.in-flagpop .fp-cancel { background:#fff; border:1px solid var(--in-border); color:var(--in-muted); }
+/* BOM rows */
+.in-bom-row { border:1px solid var(--in-border); border-radius:12px; padding:16px; margin-bottom:12px; background:#FCFCFD; }
+.in-bom-row .rowhdr { display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; font-size:11px; font-weight:800; color:var(--in-muted); font-family:'JetBrains Mono',monospace; letter-spacing:.08em; }
+.in-bom-row .rowdel { background:#fff; border:1px solid #F3C6C6; color:var(--in-error); border-radius:6px; padding:3px 10px; font-size:11px; font-weight:700; cursor:pointer; font-family:inherit; }
+.in-addrow { background:var(--in-primary-soft); border:1.5px dashed var(--in-primary); color:var(--in-primary); border-radius:9px; padding:11px; width:100%; font-family:inherit; font-size:12.5px; font-weight:700; cursor:pointer; margin-bottom:6px; }
+/* footer: Back / Next pinned to the card bottom */
+.in-foot { flex-shrink:0; display:flex; justify-content:space-between; gap:10px; padding:14px 28px; border-top:1px solid var(--in-border); background:#fff; }
+.in-warn { background:#FEF2F2; border:1px solid #FCA5A5; color:#B91C1C; border-radius:9px; padding:9px 12px; font-size:12px; margin-bottom:14px; }
+.in-btn { background:var(--in-primary); color:#fff; border:none; border-radius:9px; padding:11px 24px; font-family:inherit; font-size:13px; font-weight:700; cursor:pointer; transition:background .15s, transform .1s, box-shadow .2s; }
+.in-btn:hover { background:var(--in-primary-hover); }
+.in-btn:active { transform:translateY(1px); }
+.in-btn.ghost { background:#fff; color:var(--in-muted); border:1px solid var(--in-border); }
+.in-btn.ghost:hover { color:var(--in-text); border-color:var(--in-muted); background:#F2F4F7; }
+.in-btn:disabled { background:#E5E7EB; color:#9CA3AF; cursor:not-allowed; }
+.in-btn.in-next-ready:not(:disabled) { animation:in-ready 1.6s ease-in-out infinite; }
+/* review screen */
+.in-review-prod { margin-bottom:18px; }
+.in-review-prod > h3 { font-size:15px; font-weight:800; color:var(--in-text); margin-bottom:10px; }
+.in-rev-sec { border:1px solid var(--in-border); border-radius:12px; margin-bottom:10px; background:#fff; overflow:hidden; }
+.in-rev-sec > summary { list-style:none; cursor:pointer; padding:12px 16px; display:flex; align-items:center; gap:10px; font-size:13px; font-weight:700; color:var(--in-text); }
+.in-rev-sec > summary::-webkit-details-marker { display:none; }
+.in-rev-sec > summary .edit { color:var(--in-primary); font-size:11.5px; font-weight:700; text-decoration:none; }
+.in-rev-sec > summary .edit:hover { text-decoration:underline; }
+.in-rev-sec > summary .chev { margin-left:auto; color:var(--in-muted); transition:transform .2s; }
+.in-rev-sec[open] > summary .chev { transform:rotate(90deg); }
+.in-rev-body { padding:2px 16px 12px; border-top:1px solid var(--in-border); }
+.in-sum-row { display:flex; justify-content:space-between; gap:14px; font-size:12.5px; padding:6px 0; border-bottom:1px solid #F1F3F6; }
+.in-sum-row:last-child { border-bottom:none; }
+.in-sum-row .k { color:var(--in-muted); }
+.in-sum-row .v { color:var(--in-text); font-weight:600; text-align:right; }
+.in-sum-row.flagged { background:var(--in-flag-soft); margin:3px -10px; padding:8px 10px; border-radius:8px; border-bottom:none; }
+.in-sum-row.flagged .v { color:var(--in-flag); }
+.in-sum-note { display:block; font-size:11px; color:#92400E; font-style:italic; font-weight:600; margin-top:2px; }
+.in-confirm { display:flex; gap:9px; align-items:flex-start; margin:14px 0 4px; font-size:12.5px; color:var(--in-text); }
+.in-confirm input { accent-color:var(--in-primary); margin-top:2px; }
+.in-submit-final { flex:1; background:var(--in-ok); color:#fff; font-size:14px; padding:13px 28px; }
+.in-submit-final:hover { background:#15803D; }
+.in-submit-final:disabled { background:#E5E7EB; color:#9CA3AF; }
+/* confirmation */
+.in-done { text-align:center; padding:44px 20px; }
+.in-done .big { font-size:48px; }
+.in-done h2 { color:var(--in-text); margin-top:8px; }
+.in-done p { color:var(--in-muted); font-size:13px; max-width:520px; margin:8px auto; line-height:1.6; }
+/* legacy review classes kept harmless */
+.in-summary-sec { padding:0; }
+/* animations */
+@keyframes in-cardfade { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:none; } }
+@keyframes in-reveal { from { opacity:0; transform:translateY(-6px); } to { opacity:1; transform:none; } }
+@keyframes in-fade { from { opacity:0; } to { opacity:1; } }
+@keyframes in-ready { 0%,100% { box-shadow:0 0 0 0 var(--in-primary-soft); } 50% { box-shadow:0 0 0 5px var(--in-primary-soft); } }
+/* mobile (<768px): step rail becomes a horizontal top bar, cards full width */
+@media (max-width:768px) {
+  .in-body { grid-template-columns:1fr; }
+  .in-secnav { display:flex; gap:6px; overflow-x:auto; overflow-y:visible; -webkit-overflow-scrolling:touch; }
+  .in-secnav button { width:auto; flex-shrink:0; white-space:nowrap; padding:8px 12px; }
+  .in-header { padding:14px 16px 10px; }
+  .in-poc-note, .in-products { margin-left:16px; margin-right:16px; padding-left:0; padding-right:0; }
+  .in-body { padding:0 16px 16px; }
+  .in-card-scroll { padding:18px 16px; }
+  .in-foot { padding:12px 16px; }
+}
+@media (max-width:640px) { .in-grid { grid-template-columns:1fr; } }
+/* respect reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .in-stage *, .in-card, .in-conditional, .in-flagpop { animation:none !important; transition:none !important; }
+}
 
 
-/* standalone: the form IS the page */
-.in-stage { min-height: 100vh; }
+
+/* standalone: the form IS the page — contain to the viewport so only the
+   card body scrolls (Back/Next stay pinned, no page-length scroll). */
+html, body { height: 100%; }
+.in-stage { height: 100vh; overflow: hidden; }
+.in-shell { height: 100vh; min-height: 0; }
 </style>
 </head>
 <body>
@@ -734,6 +783,26 @@ function inSectionMissing(sec, prodIdx) {
   return missing;
 }
 function inSectionComplete(sec, prodIdx) { return inSectionMissing(sec, prodIdx).length === 0; }
+/* ── step-rail state (presentation only — derived from existing answers/flags) ──
+   untouched (gray) · active/in-progress (blue) · complete (green) · flagged (amber) */
+function inSectionHasFlag(sec, prodIdx) {
+  if (sec.scope === 'project') return sec.fields.some(f => flIsFlagged('o', f.id, IN_STATE.overview, IN_STATE.nsO));
+  const p = IN_STATE.products[prodIdx];
+  if (sec.type === 'bom') return (p.bom || []).some((r, ri) => BOM_ROW_FIELDS.some(f => flBomFlagged('bom:' + ri + ':' + f.id, r, f.id)));
+  return sec.fields.some(f => flIsFlagged('p', f.id, p.answers, p.ns));
+}
+function inSectionTouched(sec, prodIdx) {
+  if (sec.scope === 'project') return sec.fields.some(f => !inIsEmpty(IN_STATE.overview[f.id]));
+  const p = IN_STATE.products[prodIdx];
+  if (sec.type === 'bom') return (p.bom || []).some(r => BOM_ROW_FIELDS.some(f => !inIsEmpty(r[f.id])));
+  return sec.fields.some(f => !inIsEmpty(p.answers[f.id]));
+}
+function inStepState(sec, prodIdx) {
+  if (inSectionComplete(sec, prodIdx)) return 'complete';
+  if (inSectionHasFlag(sec, prodIdx)) return 'flagged';
+  if (sec.id === IN_STATE.activeSection || inSectionTouched(sec, prodIdx)) return 'active';
+  return 'untouched';
+}
 function inProductPct(pi) {
   const secs = INTAKE_SECTIONS.filter(s => s.scope === 'product');
   return Math.round(secs.filter(s => inSectionComplete(s, pi)).length / secs.length * 100);
@@ -950,7 +1019,8 @@ function inFieldHTML(f, answers, setFn, nsMap) {
   }
   const reqMsg = blocked ? `<div class="in-req-msg">Required to continue</div>` : '';
   const pop = inFlagPopHTML(scope, f.id, answers, ns);
-  return `<div class="in-field${full}${cond}${nsOn ? ' ns-on' : ''}${blocked ? ' in-required-missing' : ''}">${label}${input}${reqMsg}${pop}</div>`;
+  const st = blocked ? ' in-st-error' : flagged ? ' in-st-flag' : (!inIsEmpty(v) ? ' in-st-ok' : '');
+  return `<div class="in-field${full}${cond}${nsOn ? ' ns-on' : ''}${blocked ? ' in-required-missing' : ''}${st}">${label}${input}${reqMsg}${pop}</div>`;
 }
 function inSetO(id, value, rr) { inSet('o', id, value, rr); }
 function inSetP(id, value, rr) { inSet('p', id, value, rr); }
@@ -970,7 +1040,8 @@ function inBomRowHTML(r, ri) {
     else input = `<input class="in-input" type="${f.type}" value="${inEsc(v)}" onchange="inSetBom(${ri},'${f.id}',this.value)">`;
     const reqMsg = blocked ? `<div class="in-req-msg">Required to continue</div>` : '';
     const pop = inFlagPopHTML('p', key, r, null);
-    return `<div class="in-field${f.showIf ? ' in-conditional' : ''}${blocked ? ' in-required-missing' : ''}">${label}${input}${reqMsg}${pop}</div>`;
+    const st = blocked ? ' in-st-error' : flagged ? ' in-st-flag' : (!inIsEmpty(v) ? ' in-st-ok' : '');
+    return `<div class="in-field${f.showIf ? ' in-conditional' : ''}${blocked ? ' in-required-missing' : ''}${st}">${label}${input}${reqMsg}${pop}</div>`;
   }).join('');
   return `<div class="in-bom-row"><div class="rowhdr"><span>MATERIAL ${ri + 1}</span><button class="rowdel" type="button" onclick="inDelBomRow(${ri})">Remove row</button></div><div class="in-grid">${cells}</div></div>`;
 }
@@ -1002,8 +1073,8 @@ function inRender() {
     `<span class="px" title="Remove" onclick="event.stopPropagation();inDelProduct(${pi})">✕</span></div>`).join('') +
     `<button class="in-prod-add" type="button" onclick="inAddProduct()">＋ Add Another Product</button>`;
   const navBtns = [INTAKE_SECTIONS[0]].concat(prodSecs).map(s =>
-    `<button class="${IN_STATE.activeSection === s.id ? 'active' : ''}" onclick="inGoSection('${s.id}')"><span class="chk${inSectionComplete(s, IN_STATE.active) ? '' : ' empty'}">${inSectionComplete(s, IN_STATE.active) ? '✓' : '○'}</span>${s.num}. ${s.title}</button>`).join('') +
-    `<button class="${IN_STATE.activeSection === 'review' ? 'active' : ''}" onclick="inGoSection('review')"><span class="chk${inAllComplete() ? '' : ' empty'}">${inAllComplete() ? '✓' : '○'}</span>10. Review &amp; Submit</button>`;
+    `<button class="${IN_STATE.activeSection === s.id ? 'active' : ''}" onclick="inGoSection('${s.id}')"><span class="in-dot in-dot-${inStepState(s, IN_STATE.active)}"></span>${s.num}. ${s.title}</button>`).join('') +
+    `<button class="${IN_STATE.activeSection === 'review' ? 'active' : ''}" onclick="inGoSection('review')"><span class="in-dot in-dot-${inAllComplete() ? 'complete' : (IN_STATE.activeSection === 'review' ? 'active' : 'untouched')}"></span>10. Review &amp; Submit</button>`;
   let content = '';
   if (IN_STATE.activeSection === 'review') {
     content = inReviewSectionHTML();
@@ -1026,20 +1097,23 @@ function inRender() {
     const blocked = blockingKeys.length > 0;
     const warn = blocked ? `<div class="in-warn">Complete the ${blockingKeys.length} required field${blockingKeys.length === 1 ? '' : 's'} highlighted above to continue.</div>` : '';
     content = `<div class="in-card">
-      <div class="in-sec-title">${sec.num}. ${sec.title}${isProj ? '' : ' <span style="font-size:12px;color:#7A8AA0;font-weight:600">· ' + inEsc(IN_STATE.products[IN_STATE.active].name) + '</span>'}</div>
-      <div class="in-sec-desc">${sec.desc}</div>
-      ${inner}
-      ${warn}
+      <div class="in-card-scroll">
+        <div class="in-sec-title">${sec.num}. ${sec.title}${isProj ? '' : ' <span style="font-size:12px;color:var(--in-muted);font-weight:600">· ' + inEsc(IN_STATE.products[IN_STATE.active].name) + '</span>'}</div>
+        <div class="in-sec-desc">${sec.desc}</div>
+        ${inner}
+        ${warn}
+      </div>
       <div class="in-foot">
         <button class="in-btn ghost" type="button" ${cur <= 0 ? 'disabled' : ''} onclick="inGoSection('${idx[Math.max(0, cur - 1)]}')">← Back</button>
-        <button class="in-btn" type="button" ${blocked ? 'disabled' : ''} onclick="inGoSection('${idx[Math.min(idx.length - 1, cur + 1)]}')">Continue →</button>
+        <button class="in-btn${blocked ? '' : ' in-next-ready'}" type="button" ${blocked ? 'disabled' : ''} onclick="inGoSection('${idx[Math.min(idx.length - 1, cur + 1)]}')">Continue →</button>
       </div>
     </div>`;
   }
   wrap.innerHTML = `<div class="in-shell">
+    <div class="in-top"><i id="inOverallBar" style="width:${inOverallPct()}%"></i></div>
     <div class="in-header">
       <div class="in-logo">S</div>
-      <div class="in-head-text"><h1>Sojo Industries · New Project Intake</h1><p>Project ID: <strong>${IN_STATE.id}</strong> · your progress saves automatically</p></div>
+      <div class="in-head-text"><h1>Sojo Industries · New Project Intake</h1><p>Project ID: <strong>${IN_STATE.id}</strong> · <span id="inOverallLbl">${inOverallPct()}% complete</span> · saves automatically</p></div>
       <div class="in-head-right">
         <div class="in-share">
           <button type="button" onclick="inCopyLink()">🔗 Copy link</button>
@@ -1050,50 +1124,61 @@ function inRender() {
       </div>
     </div>
     <div class="in-poc-note">⚠ Proof of concept — answers save in this browser per project link. File uploads store the filename only. Backend transport (cross-device resume, file delivery, emails) is stubbed for later wiring.</div>
-    <div class="in-progress-wrap"><div class="in-progress-lbl"><span>Overall progress — all products</span><span id="inOverallLbl">${inOverallPct()}% complete</span></div><div class="in-bar"><i id="inOverallBar" style="width:${inOverallPct()}%"></i></div></div>
     <div class="in-products">${pills}</div>
     <div class="in-body"><div class="in-secnav">${navBtns}</div>${content}</div>
   </div>`;
 }
 
-/* Section 10 — Review & Submit (covers all products) */
+/* Section 10 — Review & Submit. Grouped by product; each section a collapsible
+   card with an Edit jump; flagged / Not-Sure fields called out in amber. */
 function inReviewSectionHTML() {
   const prodSecs = INTAKE_SECTIONS.filter(s => s.scope === 'product');
-  function secSummary(sec, answers, pi) {
-    const ns = sec.scope === 'project' ? IN_STATE.nsO : IN_STATE.products[pi].ns;
+  // One collapsible section card (defaults open when it still has missing fields).
+  function secCard(sec, answers, ns, scope, pi) {
     const rows = sec.fields.filter(f => f.type !== 'note' && inVisible(f, answers) && (!inIsEmpty(answers[f.id]) || ns[f.id]))
       .map(f => {
+        const flagged = flIsFlagged(scope, f.id, answers, ns);
         let val;
-        if (ns[f.id]) val = '🤔 Not sure — will review with Sojo';
-        else if (answers[f.id] === INTAKE_CUSTOM_SENTINEL) val = inEsc(answers[f.id + 'Custom'] || '—') + ' ✍ (your own value)';
+        if (ns[f.id]) val = '🤔 Not sure';
+        else if (answers[f.id] === INTAKE_CUSTOM_SENTINEL) val = inEsc(answers[f.id + 'Custom'] || '—') + ' ✍';
         else val = inEsc(Array.isArray(answers[f.id]) ? answers[f.id].join(', ') : answers[f.id]);
-        return `<div class="in-sum-row"><span class="k">${f.label}</span><span class="v">${val}</span></div>`;
+        const note = flagged ? flNoteFor(scope, f.id, answers, ns) : '';
+        return `<div class="in-sum-row${flagged ? ' flagged' : ''}"><span class="k">${f.label}</span><span class="v">${val}${flagged && note ? `<span class="in-sum-note">⚑ ${inEsc(note)}</span>` : ''}</span></div>`;
       }).join('');
     const missing = inSectionMissing(sec, pi);
-    const jump = missing.length ? `<a onclick="inJump(${pi},'${sec.id}')">${missing.length} missing — fix</a>` : '';
-    return `<div class="in-summary-sec"><h4>${sec.num}. ${sec.title}${jump ? ' ' + jump : ''}</h4>${rows || '<div class="in-sum-row"><span class="k">No answers yet</span></div>'}</div>`;
+    return `<details class="in-rev-sec"${missing.length ? ' open' : ''}>
+      <summary><span class="in-dot in-dot-${inStepState(sec, pi)}"></span>${sec.num}. ${sec.title}
+        <a class="edit" href="#" onclick="event.preventDefault();inJump(${pi},'${sec.id}')">Edit</a><span class="chev">▸</span></summary>
+      <div class="in-rev-body">${rows || '<div class="in-sum-row"><span class="k">No answers yet</span></div>'}${missing.length ? `<div class="in-warn" style="margin-top:8px">${missing.length} required field${missing.length === 1 ? '' : 's'} still needed</div>` : ''}</div>
+    </details>`;
   }
-  let html = `<div class="in-card"><div class="in-sec-title">10. Review &amp; Submit</div><div class="in-sec-desc">Check every product before submitting. Incomplete required fields are linked below.</div>`;
-  html += secSummary(INTAKE_SECTIONS[0], IN_STATE.overview, 0);
+  let body = `<div class="in-sec-title">Review &amp; Submit</div><div class="in-sec-desc">Check everything below, then submit. Items you flagged or marked “Not sure” are highlighted in amber for our team.</div>`;
+  body += `<div class="in-review-prod"><h3>Project Overview</h3>${secCard(INTAKE_SECTIONS[0], IN_STATE.overview, IN_STATE.nsO, 'o', 0)}</div>`;
   IN_STATE.products.forEach((p, pi) => {
-    html += `<div style="margin:16px 0 4px;font-size:13px;font-weight:800;color:#15233A">📦 ${inEsc(p.name)}</div>`;
+    const saveActive = IN_STATE.active; IN_STATE.active = pi;   // evaluate flags/state in product context
+    body += `<div class="in-review-prod"><h3>📦 ${inEsc(p.name)}</h3>`;
     prodSecs.forEach(sec => {
-      const answers = sec.type === 'bom' ? p.answers : p.answers;
       if (sec.type === 'bom') {
         const missing = inSectionMissing(sec, pi);
         const rows = p.bom.map((r, ri) => `<div class="in-sum-row"><span class="k">Material ${ri + 1}</span><span class="v">${inEsc(r.materialDesc || '—')} · ${inEsc(r.materialType || '?')} · qty ${inEsc(r.bomQty || '?')}</span></div>`).join('');
-        html += `<div class="in-summary-sec"><h4>${sec.num}. ${sec.title}${missing.length ? ` <a onclick="inJump(${pi},'${sec.id}')">${missing.length} missing — fix</a>` : ''}</h4>${rows}</div>`;
+        body += `<details class="in-rev-sec"${missing.length ? ' open' : ''}><summary><span class="in-dot in-dot-${inStepState(sec, pi)}"></span>${sec.num}. ${sec.title}<a class="edit" href="#" onclick="event.preventDefault();inJump(${pi},'${sec.id}')">Edit</a><span class="chev">▸</span></summary><div class="in-rev-body">${rows}${missing.length ? `<div class="in-warn" style="margin-top:8px">${missing.length} required field${missing.length === 1 ? '' : 's'} still needed</div>` : ''}</div></details>`;
       } else {
-        const saveActive = IN_STATE.active; IN_STATE.active = pi;   // evaluate in product context
-        html += secSummary(sec, answers, pi);
-        IN_STATE.active = saveActive;
+        body += secCard(sec, p.answers, p.ns, 'p', pi);
       }
     });
+    body += `</div>`;
+    IN_STATE.active = saveActive;
   });
+  body += `<div class="in-confirm"><input type="checkbox" id="inConfirm" ${IN_STATE.confirmed ? 'checked' : ''} onchange="IN_STATE.confirmed=this.checked;inSave();inRender()"><label for="inConfirm">I confirm this information is accurate to the best of my knowledge</label></div>`;
   const ready = inAllComplete();
-  html += `<div class="in-confirm"><input type="checkbox" id="inConfirm" ${IN_STATE.confirmed ? 'checked' : ''} onchange="IN_STATE.confirmed=this.checked;inSave();inRender()"><label for="inConfirm">I confirm this information is accurate to the best of my knowledge</label></div>`;
-  html += `<button class="in-btn" type="button" ${ready && IN_STATE.confirmed ? '' : 'disabled'} onclick="inSubmit()">Submit intake${ready ? '' : ' — complete all products first'}</button></div>`;
-  return html;
+  const lastSec = prodSecs[prodSecs.length - 1].id;
+  return `<div class="in-card">
+    <div class="in-card-scroll">${body}</div>
+    <div class="in-foot">
+      <button class="in-btn ghost" type="button" onclick="inGoSection('${lastSec}')">← Back</button>
+      <button class="in-btn in-submit-final${ready && IN_STATE.confirmed ? ' in-next-ready' : ''}" type="button" ${ready && IN_STATE.confirmed ? '' : 'disabled'} onclick="inSubmit()">Submit intake${ready ? '' : ' — complete all required fields first'}</button>
+    </div>
+  </div>`;
 }
 
 
