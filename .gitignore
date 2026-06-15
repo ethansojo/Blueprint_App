@@ -12,3 +12,19 @@ ledger/
 *.tmp
 Thumbs.db
 desktop.ini
+
+# Node / Railway backend (blueprint-app/)
+node_modules/
+blueprint-app/node_modules/
+
+# SQLite database — created at runtime, lives on the Railway volume.
+# Never commit project data.
+data/
+blueprint-app/data/
+*.db
+*.db-shm
+*.db-wal
+
+# Local env (real secrets). .env.example IS committed.
+.env
+blueprint-app/.env

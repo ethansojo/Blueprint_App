@@ -7559,8 +7559,19 @@ function inExportPayload() {
 }
 function inSubmit() {
   if (!inAllComplete() || !IN_STATE.confirmed) return;
-  IN_STATE.submitted = true;
-  inSave(); inRender();
+  const payload = inBuildPayload();
+  const finish = () => { IN_STATE.submitted = true; inSave(); inRender(); };
+  // POST to the backend when one is available (the deployed web app).
+  // Falls back to a local-only submit when opened as a standalone file
+  // (file://) or with no server — the JSON payload export still works.
+  fetch('/api/submissions', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  })
+    .then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+    .then(() => { feToast('✓ Submitted to Sojo — project ' + IN_STATE.id); finish(); })
+    .catch(() => { feToast('⚠ Saved on this device — no server connection'); finish(); });
 }
 
 /* ── field renderers ── */
@@ -7864,8 +7875,14 @@ if (allOpenItems.filter(i => i.status === 'flag' || i.status === 'tbd').length =
 
 inInit();  // intake form state (loads ?intake=<id> project if present)
 
-// A shared ?intake= link opens straight into the customer form
-switchView(new URLSearchParams(location.search).get('intake') ? 'intake' : 'flow');
+// Deep links: ?view=<id> drives the /source-map and /decision-tree redirects;
+// a shared ?intake= link opens straight into the customer form.
+(function () {
+  const params = new URLSearchParams(location.search);
+  const view = params.get('view');
+  if (view && ROUTES[view]) switchView(view);
+  else switchView(params.get('intake') ? 'intake' : 'flow');
+})();
 
 </script>
 </body>
