@@ -222,7 +222,11 @@ const STYLES = `
   .g-Low { color:var(--c-low); background:rgba(74,218,138,0.12); }
   .flags { font-weight:800; color:var(--c-flag); }
   .flags.zero { color:var(--dim); }
-  .statussel { background:rgba(255,255,255,0.04); border:1px solid var(--border); border-radius:7px; padding:5px 8px; color:var(--text); font-family:inherit; font-size:12px; }
+  .statussel { background:#2A2D33; border:1px solid #3A3D44; border-radius:7px; padding:5px 8px; color:#F2F3F5; font-family:inherit; font-size:12px; font-weight:700; cursor:pointer; }
+  .statussel:hover { border-color:#52565F; }
+  .statussel option { background:#2A2D33; color:#F2F3F5; }
+  .moveactive { background:rgba(74,218,138,0.12); border:1px solid rgba(74,218,138,0.45); color:#4ADA8A; border-radius:7px; padding:5px 9px; font-family:inherit; font-size:11.5px; font-weight:700; cursor:pointer; margin-left:6px; white-space:nowrap; }
+  .moveactive:hover { background:rgba(74,218,138,0.2); }
   .empty { color:var(--muted); text-align:center; padding:48px 0; }
   .meta { display:flex; flex-wrap:wrap; gap:18px; margin:6px 0 22px; font-size:13px; color:var(--muted); }
   .meta b { color:var(--text); }
@@ -266,8 +270,11 @@ function shell(title, body, extraHead) {
 ${body}</body></html>`;
 }
 
+// Per-status accent colors (editable config). Shown on the dark-grey control.
+const STATUS_COLORS = { 'Draft': '#9AA0AA', 'Submitted': '#5A9CD8', 'In Review': '#E8C840', 'Setup Complete': '#4ADA8A' };
 function statusOptions(current) {
-  return db.VALID_STATUSES.map(s => `<option${s === current ? ' selected' : ''}>${s}</option>`).join('');
+  return db.VALID_STATUSES.map(s =>
+    `<option${s === current ? ' selected' : ''} style="background:#2A2D33;color:${STATUS_COLORS[s] || '#F2F3F5'}">${s}</option>`).join('');
 }
 
 const GRADE_RANK = { High: 3, Moderate: 2, Low: 1 };
@@ -285,7 +292,9 @@ function renderProjectsPage(projects, mode) {
       return `<tr ${dataAttrs}>${nameCell}${custCell}
         <td>${esc((p.created_at || '').slice(0, 10))}</td>
         <td>${esc((p.updated_at || '').slice(0, 10))}</td>
-        <td>${p.product_count}</td>${gradeCell}${flagCell}</tr>`;
+        <td>${p.product_count}</td>
+        <td style="white-space:nowrap"><select class="statussel" onchange="setStatus('${esc(p.project_id)}', this.value)">${statusOptions(p.status)}</select><button class="moveactive" onclick="moveActive('${esc(p.project_id)}')" title="Move back to the Active dashboard">↩ Active</button></td>
+        ${gradeCell}${flagCell}</tr>`;
     }
     return `<tr ${dataAttrs}>${nameCell}${custCell}
       <td>${esc((p.updated_at || '').slice(0, 10))}</td>
@@ -296,7 +305,7 @@ function renderProjectsPage(projects, mode) {
   const head = archive
     ? `<th onclick="sortBy('name')">Project</th><th onclick="sortBy('customer')">Customer</th>
        <th onclick="sortBy('date')">Submitted</th><th onclick="sortBy('date')">Completed</th>
-       <th>Products</th><th onclick="sortBy('grade')">Complexity</th><th>Flagged</th>`
+       <th>Products</th><th>Status</th><th onclick="sortBy('grade')">Complexity</th><th>Flagged</th>`
     : `<th onclick="sortBy('name')">Project</th><th onclick="sortBy('customer')">Customer</th>
        <th onclick="sortBy('date')">Updated</th><th>Status</th>
        <th onclick="sortBy('grade')">Complexity</th><th>Flagged</th>`;
@@ -345,6 +354,7 @@ function renderProjectsPage(projects, mode) {
         method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status: status })
       }).then(function (r) { if (r.ok) location.reload(); else alert('Could not update status'); });
     }
+    function moveActive(id) { setStatus(id, 'In Review'); }   // back to the Active dashboard
   </script>`;
   return shell((archive ? 'Archive' : 'Projects') + ' · Blueprint', body);
 }
@@ -388,6 +398,7 @@ function renderDetail(p) {
       <span>Complexity <b class="badge g-${esc(p.complexity_grade)}">${esc(p.complexity_grade)}</b></span>
       <span>Status
         <select class="statussel" onchange="setStatus('${esc(p.project_id)}', this.value)">${statusOptions(p.status)}</select>
+        ${p.status === db.COMPLETED_STATUS ? `<button class="moveactive" onclick="moveActive('${esc(p.project_id)}')" title="Move back to the Active dashboard">↩ Move to Active</button>` : ''}
       </span>
     </div>
     <div class="card"><h3>🤔 Flagged fields (${p.flags.length}) <a href="${DASH}/review/${encodeURIComponent(p.project_id)}" style="float:right;font-size:11px">Review flags →</a></h3>${flagsHtml}</div>
@@ -401,8 +412,9 @@ function renderDetail(p) {
     function setStatus(id, status) {
       fetch(BASE + '/api/projects/' + encodeURIComponent(id) + '/status', {
         method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status: status })
-      }).then(function (r) { if (!r.ok) alert('Could not update status'); });
+      }).then(function (r) { if (r.ok) location.reload(); else alert('Could not update status'); });
     }
+    function moveActive(id) { setStatus(id, 'In Review'); }
   </script>`;
   return shell(p.project_name + ' · Blueprint', body);
 }
