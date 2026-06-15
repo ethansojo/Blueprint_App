@@ -20,6 +20,8 @@ const path = require('path');
 const here = __dirname;
 const html = fs.readFileSync(path.join(here, 'index.html'), 'utf8');
 const intakeData = fs.readFileSync(path.join(here, 'intake-data.js'), 'utf8');
+const validationJs = fs.readFileSync(path.join(here, 'validation.js'), 'utf8');
+const flagsJs = fs.readFileSync(path.join(here, 'flags.js'), 'utf8');
 
 function must(re, label) {
   const m = html.match(re);
@@ -74,6 +76,12 @@ ${inCss}
 <script>
 /* Inlined from intake-data.js */
 ${intakeData}
+</script>
+
+<script>
+/* Inlined from validation.js + flags.js (gating + flag logic) */
+${validationJs}
+${flagsJs}
 </script>
 
 <script>

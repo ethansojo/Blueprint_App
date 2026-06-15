@@ -9,6 +9,8 @@ $index  = Join-Path $here 'index.html'
 $data   = Join-Path $here 'data.js'
 $fields = Join-Path $here 'fields-data.js'
 $intake = Join-Path $here 'intake-data.js'
+$valid  = Join-Path $here 'validation.js'
+$flags  = Join-Path $here 'flags.js'
 $out    = Join-Path (Split-Path $here -Parent) 'Blueprint_App.html'
 
 # Read files as UTF-8 (so multi-byte characters survive intact)
@@ -16,6 +18,8 @@ $indexHtml = [System.IO.File]::ReadAllText($index,  [System.Text.Encoding]::UTF8
 $dataJs    = [System.IO.File]::ReadAllText($data,   [System.Text.Encoding]::UTF8)
 $fieldsJs  = [System.IO.File]::ReadAllText($fields, [System.Text.Encoding]::UTF8)
 $intakeJs  = [System.IO.File]::ReadAllText($intake, [System.Text.Encoding]::UTF8)
+$validJs   = [System.IO.File]::ReadAllText($valid,  [System.Text.Encoding]::UTF8)
+$flagsJs   = [System.IO.File]::ReadAllText($flags,  [System.Text.Encoding]::UTF8)
 
 # Build the inline replacements (note: no non-ASCII chars in this script source)
 $banner  = "/* Inlined from data.js -- edit blueprint-app/data.js then re-run build.ps1 */"
@@ -41,10 +45,32 @@ $bundled  = [System.Text.RegularExpressions.Regex]::Replace(
               $bundled,
               $pattern3,
               [System.Text.RegularExpressions.MatchEvaluator]{ param($m) $inline3 })
+$banner4 = "/* Inlined from validation.js -- edit blueprint-app/validation.js then re-run build.ps1 */"
+$inline4 = "<script>`r`n$banner4`r`n$validJs`r`n</script>"
+$pattern4 = '<script\s+src="validation\.js"[^>]*>\s*</script>'
+$bundled  = [System.Text.RegularExpressions.Regex]::Replace(
+              $bundled,
+              $pattern4,
+              [System.Text.RegularExpressions.MatchEvaluator]{ param($m) $inline4 })
+$banner5 = "/* Inlined from flags.js -- edit blueprint-app/flags.js then re-run build.ps1 */"
+$inline5 = "<script>`r`n$banner5`r`n$flagsJs`r`n</script>"
+$pattern5 = '<script\s+src="flags\.js"[^>]*>\s*</script>'
+$bundled  = [System.Text.RegularExpressions.Regex]::Replace(
+              $bundled,
+              $pattern5,
+              [System.Text.RegularExpressions.MatchEvaluator]{ param($m) $inline5 })
 
 # Sanity checks
-if ($bundled -match '<script\s+src="(data|fields-data|intake-data)\.js"') {
+if ($bundled -match '<script\s+src="(data|fields-data|intake-data|validation|flags)\.js"') {
   Write-Error 'Build failed: external js reference still present in output.'
+  exit 1
+}
+if (-not ($bundled -match 'function\s+vFieldBlocks')) {
+  Write-Error 'Build failed: validation.js content not detected in output.'
+  exit 1
+}
+if (-not ($bundled -match 'function\s+flBuildAll')) {
+  Write-Error 'Build failed: flags.js content not detected in output.'
   exit 1
 }
 if (-not ($bundled -match 'const\s+SOURCES')) {

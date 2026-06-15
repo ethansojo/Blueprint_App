@@ -40,7 +40,7 @@ app.use(express.json({ limit: '2mb' }));
 
 const PUBLIC_DIR = path.join(__dirname, 'public');
 const DATA_DIR = path.join(__dirname, 'data');
-const APP_FILES = { 'data.js': 1, 'fields-data.js': 1, 'intake-data.js': 1 };
+const APP_FILES = { 'data.js': 1, 'fields-data.js': 1, 'intake-data.js': 1, 'validation.js': 1, 'flags.js': 1 };
 
 /* ── unlisted dashboard path ───────────────────────────────────────────────
    No password — the hard-to-guess URL is the barrier. The slug is generated
@@ -83,6 +83,18 @@ app.post('/api/submissions', (req, res) => {
   } catch (err) {
     console.error('saveSubmission failed:', err);
     res.status(500).json({ ok: false, error: 'Could not save submission' });
+  }
+});
+
+// The form writes a single flag here live (Part C — flag popover / Not-sure /
+// custom value). Public, same trust model as the form itself.
+app.post('/api/submissions/:id/flags', (req, res) => {
+  try {
+    db.saveFormFlag({ ...(req.body || {}), project_id: req.params.id });
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('saveFormFlag failed:', err);
+    res.status(400).json({ ok: false, error: err.message });
   }
 });
 
@@ -137,17 +149,44 @@ app.post(DASH + '/api/projects/:id/flags', (req, res) => {
   }
 });
 
+// Flag review (Part D): edit a note / clear a flag.
+app.patch(DASH + '/api/flags/:flagId', (req, res) => {
+  try {
+    const ok = db.updateFlagNote(req.params.flagId, (req.body || {}).note);
+    if (!ok) return res.status(404).json({ ok: false, error: 'Not found' });
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(400).json({ ok: false, error: err.message });
+  }
+});
+app.delete(DASH + '/api/flags/:flagId', (req, res) => {
+  const ok = db.clearFlag(req.params.flagId);
+  if (!ok) return res.status(404).json({ ok: false, error: 'Not found' });
+  res.json({ ok: true });
+});
+
 /* ════════════════════════════════════════════════════════════════════════
-   DASHBOARD  (server-rendered, dark theme — reachable only at the unlisted base)
+   DASHBOARD  (server-rendered — reachable only at the unlisted base)
+   Active (default) and Archive (Setup Complete) over the same data.
    ════════════════════════════════════════════════════════════════════════ */
 app.get(DASH, (req, res) => {
-  res.type('html').send(renderDashboard(db.listProjects()));
+  res.type('html').send(renderProjectsPage(db.listActive(), 'active'));
+});
+
+app.get(DASH + '/archive', (req, res) => {
+  res.type('html').send(renderProjectsPage(db.listCompleted(), 'archive'));
 });
 
 app.get(DASH + '/p/:id', (req, res) => {
   const p = db.getProject(req.params.id);
   if (!p) return res.status(404).type('html').send(shell('Not found', '<div class="wrap"><p>No project <code>' + esc(req.params.id) + '</code>. <a href="' + DASH + '">← Back</a></p></div>'));
   res.type('html').send(renderDetail(p));
+});
+
+app.get(DASH + '/review/:id', (req, res) => {
+  const p = db.getProject(req.params.id);
+  if (!p) return res.status(404).type('html').send(shell('Not found', '<div class="wrap"><p>No project <code>' + esc(req.params.id) + '</code>. <a href="' + DASH + '">← Back</a></p></div>'));
+  res.type('html').send(renderFlagReview(p));
 });
 
 app.listen(PORT, () => {
@@ -211,6 +250,22 @@ const STYLES = `
   .map-table td, .map-table th { font-size:12.5px; }
   .map-arrow { color:var(--dim); }
   code { font-family:'JetBrains Mono',monospace; font-size:12px; color:var(--accent); }
+  .tabs { display:flex; gap:8px; margin-bottom:16px; }
+  .tab { padding:7px 15px; border-radius:8px; border:1px solid var(--border); color:var(--muted); font-weight:700; font-size:13px; cursor:pointer; }
+  .tab:hover { color:var(--text); text-decoration:none; }
+  .tab.active { background:rgba(255,224,102,0.1); color:var(--accent); border-color:var(--accent); }
+  .fr-group { margin-bottom:22px; }
+  .fr-group > h2 { font-size:15px; font-weight:800; margin-bottom:8px; }
+  .fr-sec { font-size:11px; text-transform:uppercase; letter-spacing:0.05em; color:var(--c-bp); margin:12px 0 6px; }
+  .fr-card { border:1px solid rgba(255,144,64,0.3); background:rgba(255,144,64,0.05); border-radius:9px; padding:12px 14px; margin-bottom:10px; }
+  .fr-card .fr-field { font-weight:800; color:var(--c-flag); }
+  .fr-card .fr-val { color:var(--text); }
+  .fr-card .fr-meta { font-size:11px; color:var(--muted); margin:3px 0 8px; }
+  .fr-note { width:100%; background:rgba(255,255,255,0.04); border:1px solid var(--border); border-radius:7px; padding:8px 10px; color:var(--text); font-family:inherit; font-size:12.5px; resize:vertical; min-height:46px; }
+  .fr-actions { margin-top:7px; display:flex; gap:8px; }
+  .fr-actions button { border:none; border-radius:7px; padding:6px 12px; font-family:inherit; font-size:12px; font-weight:700; cursor:pointer; }
+  .fr-save { background:var(--accent); color:#1A1500; }
+  .fr-clear { background:transparent; border:1px solid rgba(224,122,122,0.5); color:#E07A7A; }
 `;
 
 function shell(title, body, extraHead) {
@@ -229,45 +284,60 @@ function statusOptions(current) {
   return db.VALID_STATUSES.map(s => `<option${s === current ? ' selected' : ''}>${s}</option>`).join('');
 }
 
-function renderDashboard(projects) {
-  const rows = projects.map(p => `
-    <tr data-customer="${esc((p.customer_name || '').toLowerCase())}"
-        data-name="${esc((p.project_name || '').toLowerCase())}"
-        data-status="${esc(p.status)}" data-date="${esc(p.updated_at)}">
-      <td><a href="${DASH}/p/${encodeURIComponent(p.project_id)}">${esc(p.project_name)}</a><br><code>${esc(p.project_id)}</code></td>
-      <td>${esc(p.customer_name) || '<span style="color:var(--dim)">—</span>'}</td>
+const GRADE_RANK = { High: 3, Moderate: 2, Low: 1 };
+
+// Active and Archive share this renderer (Part A: toggle over the same data).
+function renderProjectsPage(projects, mode) {
+  const archive = mode === 'archive';
+  const rows = projects.map(p => {
+    const dataAttrs = `data-customer="${esc((p.customer_name || '').toLowerCase())}" data-name="${esc((p.project_name || '').toLowerCase())}" data-date="${esc(p.updated_at)}" data-grade="${GRADE_RANK[p.complexity_grade] || 0}"`;
+    const nameCell = `<td><a href="${DASH}/p/${encodeURIComponent(p.project_id)}">${esc(p.project_name)}</a><br><code>${esc(p.project_id)}</code></td>`;
+    const custCell = `<td>${esc(p.customer_name) || '<span style="color:var(--dim)">—</span>'}</td>`;
+    const gradeCell = `<td><span class="badge g-${esc(p.complexity_grade)}">${esc(p.complexity_grade)}</span></td>`;
+    const flagCell = `<td class="flags ${p.flag_count ? '' : 'zero'}">${p.flag_count}</td>`;
+    if (archive) {
+      return `<tr ${dataAttrs}>${nameCell}${custCell}
+        <td>${esc((p.created_at || '').slice(0, 10))}</td>
+        <td>${esc((p.updated_at || '').slice(0, 10))}</td>
+        <td>${p.product_count}</td>${gradeCell}${flagCell}</tr>`;
+    }
+    return `<tr ${dataAttrs}>${nameCell}${custCell}
       <td>${esc((p.updated_at || '').slice(0, 10))}</td>
       <td><select class="statussel" onchange="setStatus('${esc(p.project_id)}', this.value)">${statusOptions(p.status)}</select></td>
-      <td><span class="badge g-${esc(p.complexity_grade)}">${esc(p.complexity_grade)}</span></td>
-      <td class="flags ${p.flag_count ? '' : 'zero'}">${p.flag_count}</td>
-    </tr>`).join('');
+      ${gradeCell}${flagCell}</tr>`;
+  }).join('');
+
+  const head = archive
+    ? `<th onclick="sortBy('name')">Project</th><th onclick="sortBy('customer')">Customer</th>
+       <th onclick="sortBy('date')">Submitted</th><th onclick="sortBy('date')">Completed</th>
+       <th>Products</th><th onclick="sortBy('grade')">Complexity</th><th>Flagged</th>`
+    : `<th onclick="sortBy('name')">Project</th><th onclick="sortBy('customer')">Customer</th>
+       <th onclick="sortBy('date')">Updated</th><th>Status</th>
+       <th onclick="sortBy('grade')">Complexity</th><th>Flagged</th>`;
+
+  const emptyMsg = archive
+    ? `No completed projects yet. Projects appear here once marked "${esc(db.COMPLETED_STATUS)}".`
+    : `No active projects. Share the <a href="/intake" target="_blank">intake form</a> to get started.`;
 
   const body = `<div class="wrap">
+    <div class="tabs">
+      <a class="tab ${archive ? '' : 'active'}" href="${DASH}">Active</a>
+      <a class="tab ${archive ? 'active' : ''}" href="${DASH}/archive">Archive (Completed)</a>
+    </div>
     <div class="controls">
       <input id="q" placeholder="Search by project or customer…" oninput="filterRows()"/>
-      <select id="statusFilter" onchange="filterRows()">
-        <option value="">All statuses</option>${db.VALID_STATUSES.map(s => `<option>${s}</option>`).join('')}
-      </select>
     </div>
     <table>
-      <thead><tr>
-        <th onclick="sortBy('name')">Project</th>
-        <th onclick="sortBy('customer')">Customer</th>
-        <th onclick="sortBy('date')">Updated</th>
-        <th>Status</th>
-        <th>Complexity</th>
-        <th># Flagged</th>
-      </tr></thead>
+      <thead><tr>${head}</tr></thead>
       <tbody id="rows">${rows || ''}</tbody>
     </table>
-    ${projects.length ? '' : '<div class="empty">No submissions yet. Share the <a href="/intake" target="_blank">intake form</a> to get started.</div>'}
+    ${projects.length ? '' : `<div class="empty">${emptyMsg}</div>`}
   </div>
   <script>
     function filterRows() {
       var q = document.getElementById('q').value.toLowerCase();
-      var sf = document.getElementById('statusFilter').value;
       document.querySelectorAll('#rows tr').forEach(function (tr) {
-        var hit = (tr.dataset.name.indexOf(q) > -1 || tr.dataset.customer.indexOf(q) > -1) && (!sf || tr.dataset.status === sf);
+        var hit = tr.dataset.name.indexOf(q) > -1 || tr.dataset.customer.indexOf(q) > -1;
         tr.style.display = hit ? '' : 'none';
       });
     }
@@ -278,6 +348,7 @@ function renderDashboard(projects) {
       var asc = sortState[key] = !sortState[key];
       rows.sort(function (a, b) {
         var av = a.dataset[key] || '', bv = b.dataset[key] || '';
+        if (key === 'grade') return asc ? (av - bv) : (bv - av);
         return asc ? av.localeCompare(bv) : bv.localeCompare(av);
       });
       rows.forEach(function (r) { tbody.appendChild(r); });
@@ -286,10 +357,10 @@ function renderDashboard(projects) {
     function setStatus(id, status) {
       fetch(BASE + '/api/projects/' + encodeURIComponent(id) + '/status', {
         method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status: status })
-      }).then(function (r) { if (!r.ok) alert('Could not update status'); });
+      }).then(function (r) { if (r.ok) location.reload(); else alert('Could not update status'); });
     }
   </script>`;
-  return shell('Projects · Blueprint', body);
+  return shell((archive ? 'Archive' : 'Projects') + ' · Blueprint', body);
 }
 
 function renderDetail(p) {
@@ -333,7 +404,7 @@ function renderDetail(p) {
         <select class="statussel" onchange="setStatus('${esc(p.project_id)}', this.value)">${statusOptions(p.status)}</select>
       </span>
     </div>
-    <div class="card"><h3>🤔 Flagged fields (${p.flags.length})</h3>${flagsHtml}</div>
+    <div class="card"><h3>🤔 Flagged fields (${p.flags.length}) <a href="${DASH}/review/${encodeURIComponent(p.project_id)}" style="float:right;font-size:11px">Review flags →</a></h3>${flagsHtml}</div>
     <div class="card"><h3>Project Overview</h3>
       <div class="kv">${Object.keys(overview).map(k => `<div class="k">${esc(k)}</div><div class="v">${esc(overview[k])}</div>`).join('') || '<div class="k">No overview</div><div class="v"></div>'}</div>
     </div>
@@ -348,4 +419,72 @@ function renderDetail(p) {
     }
   </script>`;
   return shell(p.project_name + ' · Blueprint', body);
+}
+
+/* Flag review screen (Part D) — grouped by product → section, editable notes,
+   clear-flag, JSON export. */
+function renderFlagReview(p) {
+  const flags = p.flags || [];
+  // group: product_index (null = overview) → section → [flags]
+  const groups = {};
+  flags.forEach(f => {
+    const pk = f.product_index == null ? 'overview' : String(f.product_index);
+    const sk = f.section || '(no section)';
+    (groups[pk] = groups[pk] || {});
+    (groups[pk][sk] = groups[pk][sk] || []).push(f);
+  });
+  const products = (p.payload && p.payload.products) || [];
+  const groupName = pk => pk === 'overview' ? 'Project Overview' : ('📦 ' + ((products[+pk] && products[+pk].name) || ('Product ' + (+pk + 1))));
+
+  const orderedKeys = Object.keys(groups).sort((a, b) => (a === 'overview' ? -1 : b === 'overview' ? 1 : (+a) - (+b)));
+  const groupsHtml = orderedKeys.map(pk => {
+    const secs = groups[pk];
+    const secHtml = Object.keys(secs).map(sk => {
+      const cards = secs[sk].map(f => `
+        <div class="fr-card" data-flag="${f.id}">
+          <div class="fr-field">${esc(f.field_label)}${f.value ? ' — <span class="fr-val">' + esc(f.value) + '</span>' : ''}</div>
+          <div class="fr-meta">flagged by <em>${esc(f.flagged_by)}</em> · ${esc((f.created_at || '').slice(0, 16).replace('T', ' '))}</div>
+          <textarea class="fr-note" id="note-${f.id}">${esc(f.note)}</textarea>
+          <div class="fr-actions">
+            <button class="fr-save" onclick="saveNote(${f.id})">Save note</button>
+            <button class="fr-clear" onclick="clearFlag(${f.id})">Clear flag</button>
+          </div>
+        </div>`).join('');
+      return `<div class="fr-sec">${esc(sk)}</div>${cards}`;
+    }).join('');
+    return `<div class="fr-group"><h2>${esc(groupName(pk))}</h2>${secHtml}</div>`;
+  }).join('');
+
+  const body = `<div class="wrap">
+    <p><a href="${DASH}/p/${encodeURIComponent(p.project_id)}">← Back to ${esc(p.project_name)}</a></p>
+    <h2 style="font-size:20px;font-weight:800;margin:10px 0 2px">${flags.length} field${flags.length === 1 ? '' : 's'} flagged for review</h2>
+    <div class="meta"><span>Project <b><code>${esc(p.project_id)}</code></b></span><span>Customer <b>${esc(p.customer_name) || '—'}</b></span>
+      <span><a href="#" onclick="exportFlags();return false">⬇ Export JSON</a></span></div>
+    ${flags.length ? groupsHtml : '<div class="empty">No fields flagged for this project.</div>'}
+  </div>
+  <script>
+    var BASE = ${JSON.stringify(DASH)};
+    var FLAGS = ${JSON.stringify(flags)};
+    function saveNote(id) {
+      var note = document.getElementById('note-' + id).value;
+      fetch(BASE + '/api/flags/' + id, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ note: note }) })
+        .then(function (r) { if (!r.ok) alert('Could not save note'); else flash(id); });
+    }
+    function clearFlag(id) {
+      if (!confirm('Clear this flag? It will be removed from the review list.')) return;
+      fetch(BASE + '/api/flags/' + id, { method: 'DELETE' })
+        .then(function (r) { if (r.ok) { var el = document.querySelector('[data-flag="' + id + '"]'); if (el) el.remove(); } else alert('Could not clear flag'); });
+    }
+    function flash(id) {
+      var el = document.querySelector('[data-flag="' + id + '"]');
+      if (!el) return; el.style.transition = 'background 0.2s'; var o = el.style.background;
+      el.style.background = 'rgba(74,218,138,0.18)'; setTimeout(function () { el.style.background = o; }, 500);
+    }
+    function exportFlags() {
+      var blob = new Blob([JSON.stringify(FLAGS, null, 2)], { type: 'application/json' });
+      var a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+      a.download = 'flags-' + ${JSON.stringify(p.project_id)} + '.json'; document.body.appendChild(a); a.click(); a.remove();
+    }
+  </script>`;
+  return shell('Flag review · ' + p.project_name, body);
 }

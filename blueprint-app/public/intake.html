@@ -135,6 +135,26 @@ body { background: var(--bg); color: var(--text); font-family: 'Manrope', sans-s
 .in-done .big { font-size: 40px; }
 .in-done h2 { color: var(--text); }
 .in-done p { color: var(--muted); font-size: 13px; max-width: 520px; margin: 8px auto; line-height: 1.6; }
+/* field action buttons (Not sure + flag) */
+.in-fieldbtns { display: flex; gap: 6px; align-items: center; flex-shrink: 0; }
+.in-flag { background: transparent; border: 1px solid var(--border); border-radius: 12px; padding: 2px 8px; font-family: 'Manrope', sans-serif; font-size: 11px; font-weight: 700; color: var(--dim); cursor: pointer; line-height: 1.4; }
+.in-flag:hover { color: var(--c-flag); border-color: rgba(255,144,64,0.5); }
+.in-flag.on { color: var(--c-flag); border-color: rgba(255,144,64,0.6); background: rgba(255,144,64,0.12); }
+/* required-to-continue highlight */
+.in-field.in-required-missing .in-input,
+.in-field.in-required-missing .in-select,
+.in-field.in-required-missing .in-textarea { border-color: rgba(224,122,122,0.7); box-shadow: 0 0 0 2px rgba(224,122,122,0.12); }
+.in-req-msg { color: #E07A7A; font-size: 11px; font-weight: 700; margin-top: 3px; }
+/* flag popover */
+.in-flagpop { grid-column: 1 / -1; border: 1px solid rgba(255,144,64,0.4); background: rgba(255,144,64,0.06); border-radius: 9px; padding: 11px 13px; margin-top: 8px; }
+.in-flagpop .fp-title { font-size: 11px; font-weight: 800; color: var(--c-flag); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px; }
+.in-flagpop textarea { width: 100%; background: rgba(255,255,255,0.04); border: 1px solid var(--border); border-radius: 7px; padding: 8px 10px; color: var(--text); font-family: 'Manrope', sans-serif; font-size: 12.5px; resize: vertical; min-height: 50px; }
+.in-flagpop textarea:focus { outline: none; border-color: var(--accent); }
+.in-flagpop .fp-actions { display: flex; gap: 8px; margin-top: 8px; }
+.in-flagpop .fp-actions button { border: none; border-radius: 7px; padding: 6px 13px; font-family: 'Manrope', sans-serif; font-size: 12px; font-weight: 700; cursor: pointer; }
+.in-flagpop .fp-save { background: var(--c-flag); color: #1A1000; }
+.in-flagpop .fp-clear { background: transparent; border: 1px solid var(--border); color: var(--muted); }
+.in-flagpop .fp-cancel { background: transparent; border: 1px solid var(--border); color: var(--muted); }
 
 
 /* standalone: the form IS the page */
@@ -202,84 +222,84 @@ const INTAKE_SECTIONS = [
     desc: 'Allergens, certifications, shelf life, and anything regulatory.',
     fields: [
       { id: 'allergensPresent', label: 'Allergens present?', type: 'select', required: true, options: ['Yes','No'] },
-      { id: 'allergenList',     label: 'Which allergens?',   type: 'multiselect', options: ['Dairy','Gluten','Soy','Nuts','Eggs','Hemp','Other'], showIf: { field: 'allergensPresent', equals: 'Yes' } },
+      { required: false, id: 'allergenList',     label: 'Which allergens?',   type: 'multiselect', options: ['Dairy','Gluten','Soy','Nuts','Eggs','Hemp','Other'], showIf: { field: 'allergensPresent', equals: 'Yes' } },
       { id: 'organic',          label: 'Certified organic?', type: 'select', required: true, options: ['Yes','No'] },
       { id: 'regulatory',       label: 'Regulatory / food safety considerations?', type: 'select', required: true, options: ['Yes','No'] },
-      { id: 'regulatoryDesc',   label: 'Describe the considerations', type: 'textarea', showIf: { field: 'regulatory', equals: 'Yes' } },
+      { required: false, id: 'regulatoryDesc',   label: 'Describe the considerations', type: 'textarea', showIf: { field: 'regulatory', equals: 'Yes' } },
       { id: 'shelfLife',        label: 'Product shelf life', type: 'select', required: true, options: ['6 months','9 months','12 months','18 months','24 months','NA — shelf stable', INTAKE_CUSTOM_SENTINEL] },
       { id: 'shelfLifeCustom',  label: 'Your product shelf life', type: 'text', required: true, helper: 'Custom values are flagged for Sojo review', showIf: { field: 'shelfLife', equals: INTAKE_CUSTOM_SENTINEL } },
       { id: 'minShipShelfLife', label: 'Minimum shipping shelf life', type: 'select', required: true, helper: 'The minimum remaining shelf life acceptable when product ships', options: ['30 days','60 days','90 days','120 days','180 days','50% of total shelf life','NA', INTAKE_CUSTOM_SENTINEL] },
       { id: 'minShipShelfLifeCustom', label: 'Your minimum shipping shelf life', type: 'text', required: true, helper: 'Custom values are flagged for Sojo review', showIf: { field: 'minShipShelfLife', equals: INTAKE_CUSTOM_SENTINEL } },
-      { id: 'flavorOrientation',     label: 'Specific flavor orientation required in pack?', type: 'select', options: ['Yes','No'] },
-      { id: 'flavorOrientationDesc', label: 'Describe the orientation', type: 'text', showIf: { field: 'flavorOrientation', equals: 'Yes' } },
+      { required: false, id: 'flavorOrientation',     label: 'Specific flavor orientation required in pack?', type: 'select', options: ['Yes','No'] },
+      { required: false, id: 'flavorOrientationDesc', label: 'Describe the orientation', type: 'text', showIf: { field: 'flavorOrientation', equals: 'Yes' } },
     ]},
   { id: 's4', num: 4, title: 'Lot Code Requirements', scope: 'product',
     desc: 'How lot and date codes should read on this product.',
     fields: [
       { id: 'lotCodeFormat',  label: 'Lot Code Format', type: 'select', required: true, options: ['MMDDYY (Sojo Standard)','YYMMDD','MMDDYYYY','Custom'] },
-      { id: 'lotCodeCustom',  label: 'Custom format + reasoning', type: 'text', showIf: { field: 'lotCodeFormat', equals: 'Custom' } },
+      { required: false, id: 'lotCodeCustom',  label: 'Custom format + reasoning', type: 'text', showIf: { field: 'lotCodeFormat', equals: 'Custom' } },
       { id: 'printedDateStandard', label: 'Printed date code: use Sojo Standard?', type: 'select', required: true, options: ['Yes','No'], helper: 'Sojo Standard — Line 1: Best By MMDDYY · Line 2: Sojo Line ID & timestamp of repack' },
-      { id: 'printedDateCustom',   label: 'Describe your printed date code', type: 'textarea', showIf: { field: 'printedDateStandard', equals: 'No' } },
+      { required: false, id: 'printedDateCustom',   label: 'Describe your printed date code', type: 'textarea', showIf: { field: 'printedDateStandard', equals: 'No' } },
       { id: 'dateCodeLocation', label: 'Date code location', type: 'select', required: true, options: ['Top of Carton','Bottom of Carton','Side of Carton','Top of Tray','Other'] },
     ]},
   { id: 's5', num: 5, title: 'Stack Height Requirements', scope: 'product',
     desc: 'Sojo Standard is 3 high for WIP, 2–3 high for packaging and finished goods. If below standard, please explain.',
     fields: [
       { id: 'fgStackHeight',   label: 'Finished good max stack height',     type: 'select', required: true, options: ['1','2','3'], helper: 'Pallets high' },
-      { id: 'fgStackReason',   label: 'Reasoning for below-standard height', type: 'text', showIf: { field: 'fgStackHeight', equalsAny: ['1','2'] } },
+      { required: false, id: 'fgStackReason',   label: 'Reasoning for below-standard height', type: 'text', showIf: { field: 'fgStackHeight', equalsAny: ['1','2'] } },
       { id: 'wipStackHeight',  label: 'WIP / raw material max stack height', type: 'select', required: true, options: ['1','2','3'] },
-      { id: 'wipStackReason',  label: 'Reasoning for below-standard height', type: 'text', showIf: { field: 'wipStackHeight', equalsAny: ['1','2'] } },
+      { required: false, id: 'wipStackReason',  label: 'Reasoning for below-standard height', type: 'text', showIf: { field: 'wipStackHeight', equalsAny: ['1','2'] } },
       { id: 'pkgStackHeight',  label: 'Packaging material max stack height', type: 'select', required: true, options: ['1','2','3'] },
     ]},
   { id: 's6', num: 6, title: 'Outbound & Load Requirements', scope: 'product',
     desc: 'How finished pallets ship out the door.',
     fields: [
       { id: 'palletPatternStandard', label: "Use Sojo's standard pallet pattern?", type: 'select', required: true, options: ['Yes','No'] },
-      { id: 'palletPatternDesc', label: 'Describe your pallet pattern', type: 'text', showIf: { field: 'palletPatternStandard', equals: 'No' } },
-      { id: 'palletPatternFile', label: 'Attach pallet pattern image',  type: 'file', showIf: { field: 'palletPatternStandard', equals: 'No' } },
+      { required: false, id: 'palletPatternDesc', label: 'Describe your pallet pattern', type: 'text', showIf: { field: 'palletPatternStandard', equals: 'No' } },
+      { required: false, id: 'palletPatternFile', label: 'Attach pallet pattern image',  type: 'file', showIf: { field: 'palletPatternStandard', equals: 'No' } },
       { id: 'stretchWrapStandard', label: 'Stretch wrap to Sojo Standard (14–17 lbs)?', type: 'select', required: true, options: ['Yes','No'] },
-      { id: 'stretchWrapRecipe',   label: 'Custom stretch wrap recipe', type: 'textarea', showIf: { field: 'stretchWrapStandard', equals: 'No' } },
+      { required: false, id: 'stretchWrapRecipe',   label: 'Custom stretch wrap recipe', type: 'textarea', showIf: { field: 'stretchWrapStandard', equals: 'No' } },
       { id: 'slipsheetsRequired', label: 'Slipsheets required?', type: 'select', required: true, options: ['Yes','No'] },
-      { id: 'slipsheetLayers',    label: 'Which layers?', type: 'select', showIf: { field: 'slipsheetsRequired', equals: 'Yes' }, options: ['Dust cover on top only','Top + layer 2','Top + between every layer','Between every layer only', INTAKE_CUSTOM_SENTINEL] },
-      { id: 'slipsheetLayersCustom', label: 'Your slipsheet placement', type: 'text', helper: 'Custom values are flagged for Sojo review', showIf: { field: 'slipsheetLayers', equals: INTAKE_CUSTOM_SENTINEL } },
-      { id: 'cornerboardsRequired', label: 'Cornerboards required?', type: 'select', options: ['Yes','No'] },
-      { id: 'cornerboardHeight',    label: 'Cornerboard height', type: 'select', options: ['48in','60in','72in','Custom'], showIf: { field: 'cornerboardsRequired', equals: 'Yes' } },
-      { id: 'loadBars',   label: 'Load bars required?',   type: 'select', options: ['Yes','No'] },
-      { id: 'loadStraps', label: 'Load straps required?', type: 'select', options: ['Yes','No'] },
-      { id: 'airbagReqs', label: 'Airbag requirements',   type: 'select', options: ['None','2 — front + rear of trailer','3 — beginning, middle, end of trailer','4+', INTAKE_CUSTOM_SENTINEL] },
-      { id: 'airbagReqsCustom', label: 'Your airbag requirements', type: 'text', helper: 'Custom values are flagged for Sojo review', showIf: { field: 'airbagReqs', equals: INTAKE_CUSTOM_SENTINEL } },
-      { id: 'loadNotes',  label: 'Additional load securement notes', type: 'textarea' },
-      { id: 'loadNote',   type: 'note', label: 'Additional materials must be provided by the customer or a PO submitted to Sojo to source on your behalf.' },
+      { required: false, id: 'slipsheetLayers',    label: 'Which layers?', type: 'select', showIf: { field: 'slipsheetsRequired', equals: 'Yes' }, options: ['Dust cover on top only','Top + layer 2','Top + between every layer','Between every layer only', INTAKE_CUSTOM_SENTINEL] },
+      { required: false, id: 'slipsheetLayersCustom', label: 'Your slipsheet placement', type: 'text', helper: 'Custom values are flagged for Sojo review', showIf: { field: 'slipsheetLayers', equals: INTAKE_CUSTOM_SENTINEL } },
+      { required: false, id: 'cornerboardsRequired', label: 'Cornerboards required?', type: 'select', options: ['Yes','No'] },
+      { required: false, id: 'cornerboardHeight',    label: 'Cornerboard height', type: 'select', options: ['48in','60in','72in','Custom'], showIf: { field: 'cornerboardsRequired', equals: 'Yes' } },
+      { required: false, id: 'loadBars',   label: 'Load bars required?',   type: 'select', options: ['Yes','No'] },
+      { required: false, id: 'loadStraps', label: 'Load straps required?', type: 'select', options: ['Yes','No'] },
+      { required: false, id: 'airbagReqs', label: 'Airbag requirements',   type: 'select', options: ['None','2 — front + rear of trailer','3 — beginning, middle, end of trailer','4+', INTAKE_CUSTOM_SENTINEL] },
+      { required: false, id: 'airbagReqsCustom', label: 'Your airbag requirements', type: 'text', helper: 'Custom values are flagged for Sojo review', showIf: { field: 'airbagReqs', equals: INTAKE_CUSTOM_SENTINEL } },
+      { required: false, id: 'loadNotes',  label: 'Additional load securement notes', type: 'textarea' },
+      { required: false, id: 'loadNote',   type: 'note', label: 'Additional materials must be provided by the customer or a PO submitted to Sojo to source on your behalf.' },
     ]},
   { id: 's7', num: 7, title: 'Sticker Requirements', scope: 'product',
     desc: 'Case-level stickers and labels applied during the run.',
     fields: [
-      { id: 'stickersRequired', label: 'Stickers/labels required at case level?', type: 'select', options: ['Yes','No'] },
-      { id: 'stickerSize',      label: 'Sticker size',        type: 'select', options: ['2x2','2x4','4x4','Custom'], showIf: { field: 'stickersRequired', equals: 'Yes' } },
-      { id: 'stickerPlacement', label: 'Placement',           type: 'select', showIf: { field: 'stickersRequired', equals: 'Yes' }, options: ['Top of case','Front face','Side panel','Two adjacent sides','Over existing UPC', INTAKE_CUSTOM_SENTINEL] },
-      { id: 'stickerPlacementCustom', label: 'Your sticker placement', type: 'text', helper: 'Custom values are flagged for Sojo review', showIf: { field: 'stickerPlacement', equals: INTAKE_CUSTOM_SENTINEL } },
-      { id: 'stickersPerCase',  label: 'Number per case',     type: 'select', showIf: { field: 'stickersRequired', equals: 'Yes' }, options: ['1','2','3','4', INTAKE_CUSTOM_SENTINEL] },
-      { id: 'stickersPerCaseCustom', label: 'Your stickers per case', type: 'number', helper: 'Custom values are flagged for Sojo review', showIf: { field: 'stickersPerCase', equals: INTAKE_CUSTOM_SENTINEL } },
-      { id: 'stickerArtwork',   label: 'Attach sticker artwork', type: 'file', showIf: { field: 'stickersRequired', equals: 'Yes' } },
+      { required: false, id: 'stickersRequired', label: 'Stickers/labels required at case level?', type: 'select', options: ['Yes','No'] },
+      { required: false, id: 'stickerSize',      label: 'Sticker size',        type: 'select', options: ['2x2','2x4','4x4','Custom'], showIf: { field: 'stickersRequired', equals: 'Yes' } },
+      { required: false, id: 'stickerPlacement', label: 'Placement',           type: 'select', showIf: { field: 'stickersRequired', equals: 'Yes' }, options: ['Top of case','Front face','Side panel','Two adjacent sides','Over existing UPC', INTAKE_CUSTOM_SENTINEL] },
+      { required: false, id: 'stickerPlacementCustom', label: 'Your sticker placement', type: 'text', helper: 'Custom values are flagged for Sojo review', showIf: { field: 'stickerPlacement', equals: INTAKE_CUSTOM_SENTINEL } },
+      { required: false, id: 'stickersPerCase',  label: 'Number per case',     type: 'select', showIf: { field: 'stickersRequired', equals: 'Yes' }, options: ['1','2','3','4', INTAKE_CUSTOM_SENTINEL] },
+      { required: false, id: 'stickersPerCaseCustom', label: 'Your stickers per case', type: 'number', helper: 'Custom values are flagged for Sojo review', showIf: { field: 'stickersPerCase', equals: INTAKE_CUSTOM_SENTINEL } },
+      { required: false, id: 'stickerArtwork',   label: 'Attach sticker artwork', type: 'file', showIf: { field: 'stickersRequired', equals: 'Yes' } },
     ]},
   { id: 's8', num: 8, title: 'Raw Materials & Packaging', scope: 'product', type: 'bom',
     desc: "List each component in this product's Bill of Materials. One row per material. All item setups are per 1 BOM.",
     fields: [
       { id: 'wipSupplier', label: 'WIP Supplier',       type: 'select', required: true, options: 'suppliers' },
-      { id: 'wipSupplierOther', label: 'Specify WIP supplier', type: 'text', showIf: { field: 'wipSupplier', equals: 'Other (specify)' } },
+      { required: false, id: 'wipSupplierOther', label: 'Specify WIP supplier', type: 'text', showIf: { field: 'wipSupplier', equals: 'Other (specify)' } },
       { id: 'pkgSupplier', label: 'Packaging Supplier', type: 'select', required: true, options: 'suppliers' },
-      { id: 'pkgSupplierOther', label: 'Specify packaging supplier', type: 'text', showIf: { field: 'pkgSupplier', equals: 'Other (specify)' } },
+      { required: false, id: 'pkgSupplierOther', label: 'Specify packaging supplier', type: 'text', showIf: { field: 'pkgSupplier', equals: 'Other (specify)' } },
     ]},
   { id: 's9', num: 9, title: 'Artwork & Dielines', scope: 'product',
     desc: 'Everything our engineering team needs to spec the pack.',
     fields: [
       { id: 'dielinesProvided', label: 'Provide packaging dielines?', type: 'select', required: true, options: ['Yes','No'] },
-      { id: 'dielineFiles',     label: 'Attach dieline files with measurements', type: 'file', showIf: { field: 'dielinesProvided', equals: 'Yes' } },
-      { id: 'dielineNote',      type: 'note', label: 'Sojo will need dielines before production — your CSM will follow up.', showIf: { field: 'dielinesProvided', equals: 'No' } },
+      { required: false, id: 'dielineFiles',     label: 'Attach dieline files with measurements', type: 'file', showIf: { field: 'dielinesProvided', equals: 'Yes' } },
+      { required: false, id: 'dielineNote',      type: 'note', label: 'Sojo will need dielines before production — your CSM will follow up.', showIf: { field: 'dielinesProvided', equals: 'No' } },
       { id: 'artworkProvided',  label: 'Provide artwork files?', type: 'select', required: true, options: ['Yes','No'] },
-      { id: 'artworkFiles',     label: 'Attach artwork files', type: 'file', showIf: { field: 'artworkProvided', equals: 'Yes' } },
-      { id: 'complianceArtwork',label: 'Compliance requirements on artwork', type: 'multiselect', helper: 'Check everything that must appear on the artwork', options: ['Allergen statement','Organic certification mark','Non-GMO','Kosher','Recycling / deposit marks (CRV, etc.)','Bilingual labeling','None','Other'] },
-      { id: 'complianceArtworkNotes', label: 'Compliance details', type: 'textarea', helper: 'Specifics for anything checked above — exact statements, cert numbers, languages' },
+      { required: false, id: 'artworkFiles',     label: 'Attach artwork files', type: 'file', showIf: { field: 'artworkProvided', equals: 'Yes' } },
+      { required: false, id: 'complianceArtwork',label: 'Compliance requirements on artwork', type: 'multiselect', helper: 'Check everything that must appear on the artwork', options: ['Allergen statement','Organic certification mark','Non-GMO','Kosher','Recycling / deposit marks (CRV, etc.)','Bilingual labeling','None','Other'] },
+      { required: false, id: 'complianceArtworkNotes', label: 'Compliance details', type: 'textarea', helper: 'Specifics for anything checked above — exact statements, cert numbers, languages' },
     ]},
 ];
 
@@ -287,18 +307,18 @@ const INTAKE_SECTIONS = [
 const BOM_ROW_FIELDS = [
   { id: 'materialType', label: 'Material Type', type: 'select', required: true, options: ['WIP / Raw Material','Packaging Material','Label','Sticker','Other'] },
   { id: 'materialDesc', label: 'Material Description', type: 'text', required: true, helper: 'e.g. SOJO Tropical Punch 12oz Sleek' },
-  { id: 'flavor',       label: 'Flavor', type: 'text', showIf: { field: 'materialType', equals: 'WIP / Raw Material' } },
-  { id: 'count',        label: 'Count (CT)', type: 'select', options: ['1CT','4CT','6CT','12CT','15CT','24CT','Bulk', INTAKE_CUSTOM_SENTINEL] },
-  { id: 'countCustom',  label: 'Your count (CT)', type: 'text', showIf: { field: 'count', equals: INTAKE_CUSTOM_SENTINEL } },
-  { id: 'format',       label: 'Format', type: 'select', options: ['Loose','Shrunk','Other'] },
-  { id: 'custItemNum',  label: 'Customer Item Number', type: 'text' },
+  { required: false, id: 'flavor',       label: 'Flavor', type: 'text', showIf: { field: 'materialType', equals: 'WIP / Raw Material' } },
+  { required: false, id: 'count',        label: 'Count (CT)', type: 'select', options: ['1CT','4CT','6CT','12CT','15CT','24CT','Bulk', INTAKE_CUSTOM_SENTINEL] },
+  { required: false, id: 'countCustom',  label: 'Your count (CT)', type: 'text', showIf: { field: 'count', equals: INTAKE_CUSTOM_SENTINEL } },
+  { required: false, id: 'format',       label: 'Format', type: 'select', options: ['Loose','Shrunk','Other'] },
+  { required: false, id: 'custItemNum',  label: 'Customer Item Number', type: 'text' },
   { id: 'bomQty',       label: 'BOM Qty per finished case', type: 'number', required: true },
-  { id: 'rowLotCode',   label: 'Lot Code Format', type: 'select', options: ['MMDDYY (Sojo Standard)','YYMMDD','Custom'] },
-  { id: 'casesPerInboundPallet', label: 'Cases per inbound pallet', type: 'select', options: ['45','56','60','72','88','104', INTAKE_CUSTOM_SENTINEL] },
-  { id: 'casesPerInboundPalletCustom', label: 'Your cases per inbound pallet', type: 'number', showIf: { field: 'casesPerInboundPallet', equals: INTAKE_CUSTOM_SENTINEL } },
-  { id: 'inboundPalletType', label: 'Inbound Pallet Type', type: 'select', options: ['GMA Whitewood','Plastic','CHEP','Other'] },
-  { id: 'supplier',      label: 'Supplier', type: 'select', options: 'suppliers' },
-  { id: 'supplierOther', label: 'Specify supplier', type: 'text', showIf: { field: 'supplier', equals: 'Other (specify)' } },
+  { required: false, id: 'rowLotCode',   label: 'Lot Code Format', type: 'select', options: ['MMDDYY (Sojo Standard)','YYMMDD','Custom'] },
+  { required: false, id: 'casesPerInboundPallet', label: 'Cases per inbound pallet', type: 'select', options: ['45','56','60','72','88','104', INTAKE_CUSTOM_SENTINEL] },
+  { required: false, id: 'casesPerInboundPalletCustom', label: 'Your cases per inbound pallet', type: 'number', showIf: { field: 'casesPerInboundPallet', equals: INTAKE_CUSTOM_SENTINEL } },
+  { required: false, id: 'inboundPalletType', label: 'Inbound Pallet Type', type: 'select', options: ['GMA Whitewood','Plastic','CHEP','Other'] },
+  { required: false, id: 'supplier',      label: 'Supplier', type: 'select', options: 'suppliers' },
+  { required: false, id: 'supplierOther', label: 'Specify supplier', type: 'text', showIf: { field: 'supplier', equals: 'Other (specify)' } },
 ];
 
 /* ── NetSuite destination map — { record, section, fieldName } ──────────────
@@ -383,6 +403,207 @@ const COMPLEXITY_CONFIG = {
 </script>
 
 <script>
+/* Inlined from validation.js + flags.js (gating + flag logic) */
+/* validation.js — required-field gating for the intake form (Part B).
+   ─────────────────────────────────────────────────────────────────────────
+   Pure logic, no DOM. The form's render + navigation code calls these.
+   A field's `required` flag lives in intake-data.js — toggling it there
+   changes gating here with no component edits.
+
+   Rules:
+   - A field BLOCKS advancing when it is required, VISIBLE (showIf satisfied),
+     not satisfied by a "Not sure" mark, and empty.
+   - A required field hidden by showIf never blocks.
+*/
+'use strict';
+
+function vIsEmpty(v) {
+  return v === undefined || v === null || v === '' || (Array.isArray(v) && v.length === 0);
+}
+
+function vIsVisible(f, answers) {
+  if (!f || !f.showIf) return true;
+  const v = answers[f.showIf.field];
+  if (f.showIf.equals !== undefined) return v === f.showIf.equals;
+  if (f.showIf.equalsAny) return f.showIf.equalsAny.includes(v);
+  return true;
+}
+
+// Does this field block progress?  answers = the field's value bag,
+// ns = the matching Not-sure map (may be null for BOM rows).
+function vFieldBlocks(f, answers, ns) {
+  if (!f || f.type === 'note' || !f.required) return false;
+  if (!vIsVisible(f, answers)) return false;                 // hidden by showIf → never blocks
+  if (ns && ns[f.id]) return false;                          // "Not sure" satisfies the requirement
+  if (f.showIf && ns && ns[f.showIf.field]) return false;    // parent marked Not sure → companion waived
+  return vIsEmpty(answers[f.id]);
+}
+
+// Keys of every blocking field in a section. Plain field → its id.
+// BOM row field → "bom:<rowIndex>:<fieldId>". Used for the Next gate and
+// the inline "Required to continue" highlights.
+function vSectionBlockingKeys(sec, answers, ns, bomRows, bomFields) {
+  const keys = [];
+  (sec.fields || []).forEach(f => { if (vFieldBlocks(f, answers, ns)) keys.push(f.id); });
+  if (sec.type === 'bom' && Array.isArray(bomRows)) {
+    if (!bomRows.length) keys.push('bom:none');
+    bomRows.forEach((r, ri) => (bomFields || []).forEach(f => {
+      if (f.required && f.type !== 'note' && vIsVisible(f, r) && vIsEmpty(r[f.id])) keys.push('bom:' + ri + ':' + f.id);
+    }));
+  }
+  return keys;
+}
+
+/* flags.js — field flagging for the intake form (Part C). No DOM.
+   ─────────────────────────────────────────────────────────────────────────
+   A flag = a field the customer (or reviewer) wants Sojo to look at, with a
+   "reason" note. Flags are kept in IN_STATE so they ride in the draft + the
+   submission payload, and db.js writes them to the flags table.
+
+   Three ways a field gets flagged:
+   1. Explicit  — the ⚑ popover (a typed reason)        → stored in flagsO / product.flags
+   2. Not sure  — the "Not sure?" button                → auto-flag, default note
+   3. Custom    — a dropdown answered with the custom    → auto-flag, default note
+                  sentinel or "Other (specify)" supplier
+
+   Flag key per field:  plain field → field id;  BOM row field → "bom:<ri>:<id>".
+   One flag per (product, key); explicit notes win over auto notes.
+*/
+'use strict';
+
+function flMap(scope) {
+  return scope === 'o' ? IN_STATE.flagsO : IN_STATE.products[IN_STATE.active].flags;
+}
+function flAutoNote(kind) {
+  return kind === 'ns'
+    ? 'Customer marked "Not sure" — review with customer'
+    : 'Customer entered their own value (not from a dropdown)';
+}
+function flBomTitle() {
+  const s = INTAKE_SECTIONS.find(x => x.type === 'bom');
+  return s ? s.title : 'Raw Materials & Packaging';
+}
+function flValOf(store, id, f) {
+  let v = store ? store[id] : '';
+  if (v === INTAKE_CUSTOM_SENTINEL) v = (store[id + 'Custom'] || '');
+  return Array.isArray(v) ? v.join(', ') : (v == null ? '' : String(v));
+}
+
+/* ── metadata lookups (label / section / current value) ── */
+function flOvMeta(id) {
+  const f = (INTAKE_SECTIONS[0].fields || []).find(x => x.id === id);
+  return { label: f ? f.label : id, value: flValOf(IN_STATE.overview, id, f) };
+}
+function flProdMeta(p, key) {
+  if (key.indexOf('bom:') === 0) {
+    const parts = key.split(':'), ri = +parts[1], fid = parts[2];
+    const f = BOM_ROW_FIELDS.find(x => x.id === fid);
+    return { label: (f ? f.label : fid) + ' (material ' + (ri + 1) + ')', section: flBomTitle(), value: flValOf((p.bom && p.bom[ri]) || {}, fid, f) };
+  }
+  const sec = INTAKE_SECTIONS.filter(s => s.scope === 'product').find(s => (s.fields || []).some(x => x.id === key));
+  const f = sec ? sec.fields.find(x => x.id === key) : null;
+  return { label: f ? f.label : key, section: sec ? sec.title : '', value: flValOf(p.answers, key, f) };
+}
+
+/* ── is a field flagged (for any reason)? drives the ⚑ active state ── */
+function flIsFlagged(scope, key, store, ns) {
+  if (flMap(scope) && flMap(scope)[key]) return true;
+  if (ns && ns[key]) return true;
+  if (store) {
+    if (store[key] === INTAKE_CUSTOM_SENTINEL) return true;
+    if ((key === 'wipSupplier' || key === 'pkgSupplier') && store[key] === 'Other (specify)') return true;
+  }
+  return false;
+}
+// BOM variant (no Not-sure map for BOM rows)
+function flBomFlagged(key, row, fid) {
+  if (flMap('p') && flMap('p')[key]) return true;
+  if (row[fid] === INTAKE_CUSTOM_SENTINEL) return true;
+  if (fid === 'supplier' && row.supplier === 'Other (specify)') return true;
+  return false;
+}
+
+/* ── the note shown in the popover for a key (explicit wins, else auto) ── */
+function flNoteFor(scope, key, store, ns) {
+  const m = flMap(scope);
+  if (m && m[key]) return m[key].note || '';
+  if (ns && ns[key]) return flAutoNote('ns');
+  if (store && (store[key] === INTAKE_CUSTOM_SENTINEL || ((key === 'wipSupplier' || key === 'pkgSupplier') && store[key] === 'Other (specify)'))) return flAutoNote('custom');
+  return '';
+}
+
+/* ── save / clear an explicit flag (+ best-effort live persist) ── */
+function flSave(scope, key, note) {
+  const m = flMap(scope);
+  m[key] = { note: note || '', at: new Date().toISOString() };
+  if (typeof inSave === 'function') inSave();
+  flPush(scope, key);                         // write the row now so it lands in the flags table
+}
+function flClear(scope, key) {
+  const m = flMap(scope);
+  if (m) delete m[key];
+  if (scope === 'o') { if (IN_STATE.nsO) delete IN_STATE.nsO[key]; }
+  else { const ns = IN_STATE.products[IN_STATE.active].ns; if (ns) delete ns[key]; }
+  if (typeof inSave === 'function') inSave();
+}
+
+/* ── custom-entered (✍) values for a product ── */
+function flCustomEntries(p) {
+  const out = [];
+  INTAKE_SECTIONS.filter(s => s.scope === 'product' && s.type !== 'bom').forEach(s => (s.fields || []).forEach(f => {
+    if (Array.isArray(f.options) && f.options.includes(INTAKE_CUSTOM_SENTINEL) && p.answers[f.id] === INTAKE_CUSTOM_SENTINEL)
+      out.push({ field_id: f.id, label: f.label, section: s.title, value: p.answers[f.id + 'Custom'] || '(not entered)' });
+  }));
+  if (p.answers.wipSupplier === 'Other (specify)') out.push({ field_id: 'wipSupplier', label: 'WIP Supplier', section: flBomTitle(), value: p.answers.wipSupplierOther || '(not entered)' });
+  if (p.answers.pkgSupplier === 'Other (specify)') out.push({ field_id: 'pkgSupplier', label: 'Packaging Supplier', section: flBomTitle(), value: p.answers.pkgSupplierOther || '(not entered)' });
+  (p.bom || []).forEach((r, ri) => BOM_ROW_FIELDS.forEach(f => {
+    if (Array.isArray(f.options) && f.options.includes(INTAKE_CUSTOM_SENTINEL) && r[f.id] === INTAKE_CUSTOM_SENTINEL)
+      out.push({ field_id: 'bom:' + ri + ':' + f.id, label: f.label + ' (material ' + (ri + 1) + ')', section: flBomTitle(), value: r[f.id + 'Custom'] || '(not entered)' });
+    if (f.id === 'supplier' && r.supplier === 'Other (specify)')
+      out.push({ field_id: 'bom:' + ri + ':supplier', label: 'Supplier (material ' + (ri + 1) + ')', section: flBomTitle(), value: r.supplierOther || '(not entered)' });
+  }));
+  return out;
+}
+
+/* ── build the full flag list for the payload (one row per flagged field) ── */
+function flBuildAll() {
+  const rows = [], seen = {};
+  const add = (pi, field_id, o) => {
+    const k = pi + '|' + field_id;
+    if (seen[k]) return; seen[k] = 1;
+    rows.push(Object.assign({ project_id: IN_STATE.id, field_id: field_id, product_index: pi, flagged_by: 'customer' }, o));
+  };
+  Object.keys(IN_STATE.flagsO || {}).forEach(id => { const m = flOvMeta(id); add(null, id, { field_label: m.label, section: 'Project Overview', value: m.value, note: IN_STATE.flagsO[id].note || '' }); });
+  Object.keys(IN_STATE.nsO || {}).forEach(id => { const m = flOvMeta(id); add(null, id, { field_label: m.label, section: 'Project Overview', value: '', note: flAutoNote('ns') }); });
+  IN_STATE.products.forEach((p, pi) => {
+    Object.keys(p.flags || {}).forEach(key => { const m = flProdMeta(p, key); add(pi, key, { field_label: m.label, section: m.section, value: m.value, note: (p.flags[key].note || '') }); });
+    Object.keys(p.ns || {}).forEach(id => { const m = flProdMeta(p, id); add(pi, id, { field_label: m.label, section: m.section, value: '', note: flAutoNote('ns') }); });
+    flCustomEntries(p).forEach(c => add(pi, c.field_id, { field_label: c.label, section: c.section, value: c.value, note: flAutoNote('custom') }));
+  });
+  return rows;
+}
+
+/* ── best-effort live write so a flag becomes a flags-table row immediately ── */
+function flPush(scope, key) {
+  try {
+    let row;
+    if (scope === 'o') {
+      const m = flOvMeta(key);
+      row = { field_id: key, field_label: m.label, section: 'Project Overview', product_index: null, value: m.value, note: flNoteFor('o', key, IN_STATE.overview, IN_STATE.nsO), flagged_by: 'customer' };
+    } else {
+      const p = IN_STATE.products[IN_STATE.active];
+      const m = flProdMeta(p, key);
+      row = { field_id: key, field_label: m.label, section: m.section, product_index: IN_STATE.active, value: m.value, note: flNoteFor('p', key, p.answers, p.ns), flagged_by: 'customer' };
+    }
+    fetch('/api/submissions/' + encodeURIComponent(IN_STATE.id) + '/flags', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(row),
+    }).catch(function () {});
+  } catch (e) { /* file:// or offline — flag still rides in the submit payload */ }
+}
+
+</script>
+
+<script>
 let feToastTimer;
 function feToast(msg) {
   let el = document.getElementById('feToast');
@@ -411,7 +632,8 @@ function inVisible(f, answers) {
   if (f.showIf.equalsAny) return f.showIf.equalsAny.includes(v);
   return true;
 }
-function inNewProduct(n) { return { name: 'Product ' + n, answers: {}, bom: [{}], ns: {} }; }
+function inNewProduct(n) { return { name: 'Product ' + n, answers: {}, bom: [{}], ns: {}, flags: {} }; }
+let IN_FLAG_OPEN = null;   // scope|key of the currently-open flag popover (ephemeral UI)
 function inNsMap(scope) { return scope === 'project' || scope === 'o' ? IN_STATE.nsO : IN_STATE.products[IN_STATE.active].ns; }
 
 function inInit() {
@@ -422,9 +644,10 @@ function inInit() {
   try { IN_STATE = JSON.parse(localStorage.getItem('bpIntake_' + id)); } catch (e) { IN_STATE = null; }
   if (!IN_STATE) IN_STATE = { id, created: new Date().toISOString(), overview: {}, products: [inNewProduct(1)], active: 0, activeSection: 's1', confirmed: false, submitted: false, lastSaved: null };
   IN_STATE.id = id;
-  // migrate older saved drafts: ensure Not-sure maps exist
+  // migrate older saved drafts: ensure Not-sure + flag maps exist
   if (!IN_STATE.nsO) IN_STATE.nsO = {};
-  IN_STATE.products.forEach(p => { if (!p.ns) p.ns = {}; });
+  if (!IN_STATE.flagsO) IN_STATE.flagsO = {};
+  IN_STATE.products.forEach(p => { if (!p.ns) p.ns = {}; if (!p.flags) p.flags = {}; });
   // migrate: complianceArtwork was a free-text textarea before becoming a checklist
   IN_STATE.products.forEach(p => {
     if (typeof p.answers.complianceArtwork === 'string' && p.answers.complianceArtwork) {
@@ -462,11 +685,42 @@ function inSave() {
    customer summary, the Internal Review follow-up list, and the payload. ── */
 function inToggleNS(scope, id) {
   const ns = inNsMap(scope);
-  if (ns[id]) delete ns[id]; else ns[id] = true;
+  if (ns[id]) { delete ns[id]; }
+  else { ns[id] = true; flPush(scope, id); }   // Not sure auto-creates a flag (Part C)
   inSave(); inRender();
 }
 
+/* ── flag popover (Part C) — every field has a ⚑ to flag it with a reason ── */
+function inFlagKey(scope, key) { return scope + '|' + key; }
+function inOpenFlag(scope, key) { IN_FLAG_OPEN = inFlagKey(scope, key); inRender(); }
+function inCloseFlag() { IN_FLAG_OPEN = null; inRender(); }
+function inSaveFlag(scope, key) {
+  const ta = document.getElementById('inFlagNote');
+  flSave(scope, key, ta ? ta.value : '');
+  IN_FLAG_OPEN = null; inRender(); feToast('⚑ Field flagged for review');
+}
+function inClearFlag(scope, key) {
+  flClear(scope, key);
+  IN_FLAG_OPEN = null; inRender(); feToast('Flag cleared');
+}
+// Popover markup for a field, shown inline when its ⚑ is open.
+function inFlagPopHTML(scope, key, store, ns) {
+  if (IN_FLAG_OPEN !== inFlagKey(scope, key)) return '';
+  const note = flNoteFor(scope, key, store, ns);
+  return `<div class="in-flagpop">
+    <div class="fp-title">⚑ Reason for flag</div>
+    <textarea id="inFlagNote" placeholder="Why does this need Sojo's review?">${inEsc(note)}</textarea>
+    <div class="fp-actions">
+      <button type="button" class="fp-save" onclick="inSaveFlag('${scope}','${key}')">Save flag</button>
+      <button type="button" class="fp-clear" onclick="inClearFlag('${scope}','${key}')">Clear flag</button>
+      <button type="button" class="fp-cancel" onclick="inCloseFlag()">Cancel</button>
+    </div>
+  </div>`;
+}
+
 /* ── completion ── */
+// Labels of unsatisfied required fields in a section (for the review summary).
+// Gating logic itself lives in validation.js (vFieldBlocks).
 function inSectionMissing(sec, prodIdx) {
   const answers = sec.scope === 'project' ? IN_STATE.overview : IN_STATE.products[prodIdx].answers;
   const ns = sec.scope === 'project' ? IN_STATE.nsO : IN_STATE.products[prodIdx].ns;
@@ -474,14 +728,9 @@ function inSectionMissing(sec, prodIdx) {
   if (sec.type === 'bom') {
     const rows = IN_STATE.products[prodIdx].bom;
     if (!rows.length) missing.push('At least one material row');
-    rows.forEach((r, i) => BOM_ROW_FIELDS.forEach(f => { if (f.required && inVisible(f, r) && inIsEmpty(r[f.id])) missing.push('Row ' + (i + 1) + ': ' + f.label); }));
+    rows.forEach((r, i) => BOM_ROW_FIELDS.forEach(f => { if (f.required && f.type !== 'note' && vIsVisible(f, r) && inIsEmpty(r[f.id])) missing.push('Row ' + (i + 1) + ': ' + f.label); }));
   }
-  sec.fields.forEach(f => {
-    if (!f.required || f.type === 'note' || !inVisible(f, answers)) return;
-    if (ns[f.id]) return;                                        // marked Not sure → satisfied
-    if (f.showIf && ns[f.showIf.field]) return;                  // parent marked Not sure → companion waived
-    if (inIsEmpty(answers[f.id])) missing.push(f.label);
-  });
+  sec.fields.forEach(f => { if (vFieldBlocks(f, answers, ns)) missing.push(f.label); });
   return missing;
 }
 function inSectionComplete(sec, prodIdx) { return inSectionMissing(sec, prodIdx).length === 0; }
@@ -569,16 +818,29 @@ function inDelProduct(pi) {
   inSave(); inRender();
 }
 
-/* ── navigation (soft validation: warn, never block) ── */
+/* ── navigation — HARD gating (Part B): can't advance past a section with an
+   empty visible required field. Backward moves and the Review step stay open. ── */
+function inSectionBlockingKeys(sec, prodIdx) {
+  const answers = sec.scope === 'project' ? IN_STATE.overview : IN_STATE.products[prodIdx].answers;
+  const ns = sec.scope === 'project' ? IN_STATE.nsO : IN_STATE.products[prodIdx].ns;
+  const bom = sec.type === 'bom' ? IN_STATE.products[prodIdx].bom : null;
+  return vSectionBlockingKeys(sec, answers, ns, bom, BOM_ROW_FIELDS);
+}
 function inGoSection(secId) {
+  const order = ['s1'].concat(INTAKE_SECTIONS.filter(s => s.scope === 'product').map(s => s.id)).concat(['review']);
   const cur = INTAKE_SECTIONS.find(s => s.id === IN_STATE.activeSection);
-  if (cur) {
-    const missing = inSectionMissing(cur, IN_STATE.active);
-    if (missing.length) feToast('⚠ ' + missing.length + ' required field' + (missing.length === 1 ? '' : 's') + ' incomplete in "' + cur.title + '" — you can come back anytime');
+  const curPos = order.indexOf(IN_STATE.activeSection), tgtPos = order.indexOf(secId);
+  // Moving forward to another section is blocked while the current section has
+  // unsatisfied required fields. The Review step stays reachable so the customer
+  // can always see what's outstanding (Submit there is independently gated).
+  if (cur && tgtPos > curPos && secId !== 'review' && inSectionBlockingKeys(cur, IN_STATE.active).length) {
+    feToast('⚠ Complete the required fields highlighted below to continue');
+    inRender(); return;
   }
   IN_STATE.activeSection = secId;
+  IN_FLAG_OPEN = null;
   inSave(); inRender();
-  document.getElementById('intakeView').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  const v = document.getElementById('intakeView'); if (v) v.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 function inJump(pi, secId) { IN_STATE.active = pi; IN_STATE.activeSection = secId; inSave(); inRender(); }
 
@@ -593,28 +855,13 @@ function inNewProject() {
   if (!confirm('Start a fresh intake with a new project ID?')) return;
   const id = 'PRJ-' + Math.random().toString(36).slice(2, 8).toUpperCase();
   localStorage.setItem('bpIntakeCurrent', id);
-  IN_STATE = { id, created: new Date().toISOString(), overview: {}, products: [inNewProduct(1)], active: 0, activeSection: 's1', confirmed: false, submitted: false, lastSaved: null };
+  IN_STATE = { id, created: new Date().toISOString(), overview: {}, nsO: {}, flagsO: {}, products: [inNewProduct(1)], active: 0, activeSection: 's1', confirmed: false, submitted: false, lastSaved: null };
   inSave(); inRender();
 }
 
-/* ── customer-entered (✍) values — any dropdown answered with the custom
-   sentinel, plus Other-supplier rows. Internal team sees these flagged. ── */
+/* ── customer-entered (✍) values — delegates to flags.js (single source). ── */
 function inCustomEntries(p) {
-  const out = [];
-  INTAKE_SECTIONS.filter(s => s.scope === 'product').forEach(s => s.fields.forEach(f => {
-    if (Array.isArray(f.options) && f.options.includes(INTAKE_CUSTOM_SENTINEL) && p.answers[f.id] === INTAKE_CUSTOM_SENTINEL)
-      out.push({ field: f.label, value: p.answers[f.id + 'Custom'] || '(not entered)' });
-  }));
-  if (p.answers.wipSupplier === 'Other (specify)') out.push({ field: 'WIP Supplier', value: p.answers.wipSupplierOther || '(not entered)' });
-  if (p.answers.pkgSupplier === 'Other (specify)') out.push({ field: 'Packaging Supplier', value: p.answers.pkgSupplierOther || '(not entered)' });
-  p.bom.forEach((r, i) => {
-    BOM_ROW_FIELDS.forEach(f => {
-      if (Array.isArray(f.options) && f.options.includes(INTAKE_CUSTOM_SENTINEL) && r[f.id] === INTAKE_CUSTOM_SENTINEL)
-        out.push({ field: 'Material ' + (i + 1) + ': ' + f.label, value: r[f.id + 'Custom'] || '(not entered)' });
-    });
-    if (r.supplier === 'Other (specify)') out.push({ field: 'Material ' + (i + 1) + ': Supplier', value: r.supplierOther || '(not entered)' });
-  });
-  return out;
+  return flCustomEntries(p).map(c => ({ field: c.label, value: c.value }));
 }
 
 /* ── payload + submit ── */
@@ -623,6 +870,7 @@ function inBuildPayload() {
     projectId: IN_STATE.id,
     submittedAt: new Date().toISOString(),
     overview: Object.assign({}, IN_STATE.overview),
+    flags: flBuildAll(),                                              // authoritative flag list (Part C)
     notSureOverview: Object.keys(IN_STATE.nsO).map(k => irFieldLabel(k)),
     products: IN_STATE.products.map(p => ({
       name: p.name,
@@ -678,8 +926,13 @@ function inFieldHTML(f, answers, setFn, nsMap) {
   const cond = f.showIf ? ' in-conditional' : '';
   const full = (f.type === 'textarea' || f.type === 'multiselect' || f.type === 'note' || f.type === 'file') ? ' full' : '';
   if (f.type === 'note') return `<div class="in-note${cond}">${f.label}</div>`;
+  const blocked = vFieldBlocks(f, answers, ns);
+  const flagged = flIsFlagged(scope, f.id, answers, ns);
   const label = `<div class="in-label-row"><label class="in-label">${f.label}${f.required ? ' <span class="req">*</span>' : ''}</label>` +
-    `<button type="button" class="in-ns${nsOn ? ' on' : ''}" title="Mark this for your Sojo CSM to walk through with you" onclick="inToggleNS('${scope}','${f.id}')">${nsOn ? '🤔 Not sure ✓' : 'Not sure?'}</button></div>` +
+    `<span class="in-fieldbtns">` +
+    `<button type="button" class="in-ns${nsOn ? ' on' : ''}" title="Mark this for your Sojo CSM to walk through with you" onclick="inToggleNS('${scope}','${f.id}')">${nsOn ? '🤔 Not sure ✓' : 'Not sure?'}</button>` +
+    `<button type="button" class="in-flag${flagged ? ' on' : ''}" title="Flag this field for Sojo review" onclick="inOpenFlag('${scope}','${f.id}')">⚑</button>` +
+    `</span></div>` +
     (f.helper ? `<div class="in-helper">${f.helper}</div>` : '');
   let input = '';
   if (f.type === 'select') {
@@ -695,7 +948,9 @@ function inFieldHTML(f, answers, setFn, nsMap) {
   } else {
     input = `<input class="in-input" type="${f.type}"${dis} value="${inEsc(v)}" onchange="${setFn}('${f.id}',this.value)">`;
   }
-  return `<div class="in-field${full}${cond}${nsOn ? ' ns-on' : ''}">${label}${input}</div>`;
+  const reqMsg = blocked ? `<div class="in-req-msg">Required to continue</div>` : '';
+  const pop = inFlagPopHTML(scope, f.id, answers, ns);
+  return `<div class="in-field${full}${cond}${nsOn ? ' ns-on' : ''}${blocked ? ' in-required-missing' : ''}">${label}${input}${reqMsg}${pop}</div>`;
 }
 function inSetO(id, value, rr) { inSet('o', id, value, rr); }
 function inSetP(id, value, rr) { inSet('p', id, value, rr); }
@@ -704,11 +959,18 @@ function inBomRowHTML(r, ri) {
   const cells = BOM_ROW_FIELDS.map(f => {
     if (!inVisible(f, r)) return '';
     const v = r[f.id];
-    const label = `<label class="in-label">${f.label}${f.required ? ' <span class="req">*</span>' : ''}</label>` + (f.helper ? `<div class="in-helper">${f.helper}</div>` : '');
+    const key = 'bom:' + ri + ':' + f.id;
+    const flagged = flBomFlagged(key, r, f.id);
+    const blocked = f.required && f.type !== 'note' && vIsVisible(f, r) && inIsEmpty(v);
+    const label = `<div class="in-label-row"><label class="in-label">${f.label}${f.required ? ' <span class="req">*</span>' : ''}</label>` +
+      `<button type="button" class="in-flag${flagged ? ' on' : ''}" title="Flag this field for Sojo review" onclick="inOpenFlag('p','${key}')">⚑</button></div>` +
+      (f.helper ? `<div class="in-helper">${f.helper}</div>` : '');
     let input;
     if (f.type === 'select') input = `<select class="in-select" onchange="inSetBom(${ri},'${f.id}',this.value,true)"><option value="">Select an option</option>` + inOpts(f).map(o => `<option${v === o ? ' selected' : ''}>${o}</option>`).join('') + '</select>';
     else input = `<input class="in-input" type="${f.type}" value="${inEsc(v)}" onchange="inSetBom(${ri},'${f.id}',this.value)">`;
-    return `<div class="in-field${f.showIf ? ' in-conditional' : ''}">${label}${input}</div>`;
+    const reqMsg = blocked ? `<div class="in-req-msg">Required to continue</div>` : '';
+    const pop = inFlagPopHTML('p', key, r, null);
+    return `<div class="in-field${f.showIf ? ' in-conditional' : ''}${blocked ? ' in-required-missing' : ''}">${label}${input}${reqMsg}${pop}</div>`;
   }).join('');
   return `<div class="in-bom-row"><div class="rowhdr"><span>MATERIAL ${ri + 1}</span><button class="rowdel" type="button" onclick="inDelBomRow(${ri})">Remove row</button></div><div class="in-grid">${cells}</div></div>`;
 }
@@ -760,13 +1022,17 @@ function inRender() {
     }
     const idx = ['s1'].concat(prodSecs.map(s => s.id)).concat(['review']);
     const cur = idx.indexOf(sec.id);
+    const blockingKeys = inSectionBlockingKeys(sec, IN_STATE.active);
+    const blocked = blockingKeys.length > 0;
+    const warn = blocked ? `<div class="in-warn">Complete the ${blockingKeys.length} required field${blockingKeys.length === 1 ? '' : 's'} highlighted above to continue.</div>` : '';
     content = `<div class="in-card">
       <div class="in-sec-title">${sec.num}. ${sec.title}${isProj ? '' : ' <span style="font-size:12px;color:#7A8AA0;font-weight:600">· ' + inEsc(IN_STATE.products[IN_STATE.active].name) + '</span>'}</div>
       <div class="in-sec-desc">${sec.desc}</div>
       ${inner}
+      ${warn}
       <div class="in-foot">
         <button class="in-btn ghost" type="button" ${cur <= 0 ? 'disabled' : ''} onclick="inGoSection('${idx[Math.max(0, cur - 1)]}')">← Back</button>
-        <button class="in-btn" type="button" onclick="inGoSection('${idx[Math.min(idx.length - 1, cur + 1)]}')">Continue →</button>
+        <button class="in-btn" type="button" ${blocked ? 'disabled' : ''} onclick="inGoSection('${idx[Math.min(idx.length - 1, cur + 1)]}')">Continue →</button>
       </div>
     </div>`;
   }

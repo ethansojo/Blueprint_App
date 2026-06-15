@@ -53,7 +53,11 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_flags_project ON flags(project_id);
 `);
 
-const VALID_STATUSES = ['Draft', 'Submitted', 'In Review', 'Complete'];
+// ── config: status names (edit here only) ───────────────────────────────────
+// COMPLETED_STATUS is the single value that means "this project setup is done".
+// The dashboard treats everything else as ACTIVE and this one as ARCHIVED.
+const COMPLETED_STATUS = 'Setup Complete';
+const VALID_STATUSES = ['Draft', 'Submitted', 'In Review', COMPLETED_STATUS];
 
 /* ── prepared statements ── */
 const stmt = {
@@ -82,6 +86,10 @@ const stmt = {
   listSubmissions: db.prepare(`SELECT * FROM submissions ORDER BY datetime(updated_at) DESC`),
   getSubmission: db.prepare(`SELECT * FROM submissions WHERE project_id = ?`),
   getFlags: db.prepare(`SELECT * FROM flags WHERE project_id = ? ORDER BY id`),
+  getFlag: db.prepare(`SELECT * FROM flags WHERE id = ?`),
+  updateFlagNote: db.prepare(`UPDATE flags SET note = @note WHERE id = @id`),
+  deleteFlag: db.prepare(`DELETE FROM flags WHERE id = ?`),
+  deleteFormFlag: db.prepare(`DELETE FROM flags WHERE project_id = @project_id AND field_id = @field_id AND IFNULL(product_index,-1) = IFNULL(@product_index,-1) AND flagged_by = 'customer'`),
   updateStatus: db.prepare(`UPDATE submissions SET status = @status, updated_at = @now WHERE project_id = @project_id`),
 };
 
@@ -123,12 +131,14 @@ function flagsFromPayload(payload) {
 
 /* ── public API ──────────────────────────────────────────────────────────── */
 
-// Persist a submission + its derived flags atomically. Returns the project_id.
+// Persist a submission + its flags atomically. Returns the project_id.
+// The client (flags.js) sends the authoritative flag list as payload.flags;
+// for older payloads we fall back to deriving them from Not-sure + custom.
 const saveSubmission = db.transaction((payload) => {
   const now = nowISO();
   const project_id = String(payload.projectId || ('PRJ-' + Math.random().toString(36).slice(2, 8).toUpperCase()));
   const overview = payload.overview || {};
-  const derivedFlags = flagsFromPayload(payload);
+  const flagList = Array.isArray(payload.flags) ? payload.flags : flagsFromPayload(payload);
 
   stmt.upsertSubmission.run({
     project_id,
@@ -136,14 +146,24 @@ const saveSubmission = db.transaction((payload) => {
     contact_email: overview.contactEmail || '',
     status: 'Submitted',
     complexity_grade: rollupGrade(payload),
-    flag_count: derivedFlags.length,
+    flag_count: flagList.length,
     now,
     full_payload: JSON.stringify(payload),
   });
 
-  // Replace customer-derived flags on resubmit; keep any admin-added ones.
+  // Replace customer flags on resubmit (keep any admin-added ones).
   db.prepare(`DELETE FROM flags WHERE project_id = ? AND flagged_by = 'customer'`).run(project_id);
-  derivedFlags.forEach(f => stmt.insertFlag.run({ project_id, now, ...f }));
+  flagList.forEach(f => stmt.insertFlag.run({
+    project_id,
+    field_id: f.field_id || '',
+    field_label: f.field_label || '',
+    section: f.section || '',
+    product_index: f.product_index == null ? null : f.product_index,
+    value: f.value || '',
+    note: f.note || '',
+    flagged_by: f.flagged_by || 'customer',
+    now,
+  }));
 
   return project_id;
 });
@@ -158,8 +178,11 @@ function displayName(row) {
   return row.project_id;
 }
 
-function listProjects() {
-  return stmt.listSubmissions.all().map(r => ({
+function productCount(row) {
+  try { return (JSON.parse(row.full_payload).products || []).length; } catch (e) { return 0; }
+}
+function mapRow(r) {
+  return {
     project_id: r.project_id,
     project_name: displayName(r),
     customer_name: r.customer_name,
@@ -167,10 +190,17 @@ function listProjects() {
     status: r.status,
     complexity_grade: r.complexity_grade,
     flag_count: r.flag_count,
+    product_count: productCount(r),
     created_at: r.created_at,
-    updated_at: r.updated_at,
-  }));
+    updated_at: r.updated_at,            // for completed projects this is when it was marked complete
+  };
 }
+function listProjects() { return stmt.listSubmissions.all().map(mapRow); }
+
+// ── archive query logic (Part A) ──
+// Active = any status that is NOT the completed status. Archived = completed.
+function listActive() { return stmt.listSubmissions.all().filter(r => r.status !== COMPLETED_STATUS).map(mapRow); }
+function listCompleted() { return stmt.listSubmissions.all().filter(r => r.status === COMPLETED_STATUS).map(mapRow); }
 
 function getProject(project_id) {
   const row = stmt.getSubmission.get(project_id);
@@ -217,12 +247,47 @@ function getFlags(project_id) {
   return stmt.getFlags.all(project_id);
 }
 
+// Upsert a single flag written live from the form (one row per field).
+const saveFormFlag = db.transaction((flag) => {
+  const project_id = flag.project_id;
+  const field_id = flag.field_id || '';
+  const product_index = flag.product_index == null ? null : flag.product_index;
+  stmt.deleteFormFlag.run({ project_id, field_id, product_index });
+  stmt.insertFlag.run({
+    project_id, field_id, product_index,
+    field_label: flag.field_label || '',
+    section: flag.section || '',
+    value: flag.value || '',
+    note: flag.note || '',
+    flagged_by: flag.flagged_by || 'customer',
+    now: nowISO(),
+  });
+});
+
+// Flag review screen (Part D): edit a note, clear (delete) a flag.
+function updateFlagNote(id, note) {
+  const res = stmt.updateFlagNote.run({ id: Number(id), note: String(note == null ? '' : note) });
+  return res.changes > 0;
+}
+function clearFlag(id) {
+  const res = stmt.deleteFlag.run(Number(id));
+  return res.changes > 0;
+}
+function getFlag(id) { return stmt.getFlag.get(Number(id)); }
+
 module.exports = {
   saveSubmission,
   listProjects,
+  listActive,
+  listCompleted,
   getProject,
   updateStatus,
   saveFlag,
+  saveFormFlag,
   getFlags,
+  getFlag,
+  updateFlagNote,
+  clearFlag,
   VALID_STATUSES,
+  COMPLETED_STATUS,
 };
