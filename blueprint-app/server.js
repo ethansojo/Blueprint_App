@@ -276,7 +276,7 @@ function shell(title, body, extraHead) {
 <style>${STYLES}</style>${extraHead || ''}</head><body>
 <div class="topbar"><div class="logo">S</div><div><h1>Sojo Industries · Blueprint</h1>
 <div class="sub">Project intake tracking</div></div>
-<div class="links"><a href="${DASH}">Projects</a><a href="/intake" target="_blank">Intake form ↗</a><a href="${DASH}/app/" target="_blank">Blueprint app ↗</a></div></div>
+<div class="links"><a href="${DASH}">Active</a><a href="${DASH}/archive">Archive</a><a href="/intake" target="_blank">Intake form ↗</a><a href="${DASH}/app/" target="_blank">Blueprint app ↗</a></div></div>
 ${body}</body></html>`;
 }
 
