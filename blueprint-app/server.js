@@ -42,21 +42,13 @@ const PUBLIC_DIR = path.join(__dirname, 'public');
 const DATA_DIR = path.join(__dirname, 'data');
 const APP_FILES = { 'data.js': 1, 'fields-data.js': 1, 'intake-data.js': 1, 'validation.js': 1, 'flags.js': 1 };
 
-/* ── unlisted dashboard path ───────────────────────────────────────────────
-   No password — the hard-to-guess URL is the barrier. The slug is generated
-   once and persisted to the data volume so it stays stable across redeploys
-   (override with the DASHBOARD_SLUG env var if you want a fixed value).      */
-function resolveSlug() {
-  const fromEnv = (process.env.DASHBOARD_SLUG || '').replace(/[^A-Za-z0-9_-]/g, '');
-  if (fromEnv) return fromEnv;
-  const slugFile = path.join(DATA_DIR, '.dashboard-slug');
-  try { const s = fs.readFileSync(slugFile, 'utf8').trim(); if (s) return s; } catch (e) { /* first boot */ }
-  const slug = crypto.randomBytes(4).toString('hex');           // 8 hex chars
-  try { fs.mkdirSync(DATA_DIR, { recursive: true }); fs.writeFileSync(slugFile, slug, 'utf8'); } catch (e) { /* ephemeral fallback */ }
-  return slug;
-}
-const SLUG = resolveSlug();
-const DASH = '/projects-' + SLUG;                 // unlisted base for everything internal
+/* ── access model ───────────────────────────────────────────────────────────
+   Internal team test domain: the project dashboard is the LANDING PAGE and
+   every module is reachable from it at a clean path. No login.
+   NOTE: this exposes all internal data to anyone with the domain — intended
+   for a shared team test site. To lock it down later, reintroduce a gate.   */
+const DASH = '';                                  // internal routes live at the site root
+const HOME = '/';                                 // canonical dashboard URL for links
 
 const esc = s => String(s == null ? '' : s)
   .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -65,10 +57,7 @@ const esc = s => String(s == null ? '' : s)
    PUBLIC ROUTES
    ════════════════════════════════════════════════════════════════════════ */
 
-// Bare domain → the public form (never reveals the unlisted dashboard).
-app.get('/', (req, res) => res.redirect('/intake'));
-
-// Customer intake form — the only public HTML. Self-contained (no app assets).
+// Customer intake form — public, linked from the dashboard. Self-contained.
 app.get('/intake', (req, res) => res.sendFile(path.join(PUBLIC_DIR, 'intake.html')));
 
 // The form POSTs its full payload here.
@@ -169,7 +158,7 @@ app.delete(DASH + '/api/flags/:flagId', (req, res) => {
    DASHBOARD  (server-rendered — reachable only at the unlisted base)
    Active (default) and Archive (Setup Complete) over the same data.
    ════════════════════════════════════════════════════════════════════════ */
-app.get(DASH, (req, res) => {
+app.get('/', (req, res) => {
   res.type('html').send(renderProjectsPage(db.listActive(), 'active'));
 });
 
@@ -179,13 +168,13 @@ app.get(DASH + '/archive', (req, res) => {
 
 app.get(DASH + '/p/:id', (req, res) => {
   const p = db.getProject(req.params.id);
-  if (!p) return res.status(404).type('html').send(shell('Not found', '<div class="wrap"><p>No project <code>' + esc(req.params.id) + '</code>. <a href="' + DASH + '">← Back</a></p></div>'));
+  if (!p) return res.status(404).type('html').send(shell('Not found', '<div class="wrap"><p>No project <code>' + esc(req.params.id) + '</code>. <a href="' + HOME + '">← Back</a></p></div>'));
   res.type('html').send(renderDetail(p));
 });
 
 app.get(DASH + '/review/:id', (req, res) => {
   const p = db.getProject(req.params.id);
-  if (!p) return res.status(404).type('html').send(shell('Not found', '<div class="wrap"><p>No project <code>' + esc(req.params.id) + '</code>. <a href="' + DASH + '">← Back</a></p></div>'));
+  if (!p) return res.status(404).type('html').send(shell('Not found', '<div class="wrap"><p>No project <code>' + esc(req.params.id) + '</code>. <a href="' + HOME + '">← Back</a></p></div>'));
   res.type('html').send(renderFlagReview(p));
 });
 
@@ -193,12 +182,9 @@ app.listen(PORT, () => {
   const line = '═'.repeat(64);
   console.log(line);
   console.log(`Blueprint web app listening on port ${PORT}`);
-  console.log(`Public intake form:   /intake`);
-  console.log(`UNLISTED dashboard:   ${DASH}`);
-  console.log(`   (open <your-domain>${DASH} — this URL is the only barrier)`);
+  console.log(`Team dashboard (landing): /`);
+  console.log(`Customer intake form:     /intake`);
   console.log(line);
-  // Best-effort persistent record on the data volume, for easy retrieval.
-  try { fs.writeFileSync(path.join(DATA_DIR, 'dashboard-url.txt'), DASH + '\n', 'utf8'); } catch (e) { /* ignore */ }
 });
 
 /* ════════════════════════════════════════════════════════════════════════
@@ -276,7 +262,7 @@ function shell(title, body, extraHead) {
 <style>${STYLES}</style>${extraHead || ''}</head><body>
 <div class="topbar"><div class="logo">S</div><div><h1>Sojo Industries · Blueprint</h1>
 <div class="sub">Project intake tracking</div></div>
-<div class="links"><a href="${DASH}">Active</a><a href="${DASH}/archive">Archive</a><a href="/intake" target="_blank">Intake form ↗</a><a href="${DASH}/app/" target="_blank">Blueprint app ↗</a></div></div>
+<div class="links"><a href="${HOME}">Active</a><a href="${DASH}/archive">Archive</a><a href="/intake" target="_blank">Intake form ↗</a><a href="${DASH}/app/" target="_blank">Blueprint app ↗</a></div></div>
 ${body}</body></html>`;
 }
 
@@ -321,7 +307,7 @@ function renderProjectsPage(projects, mode) {
 
   const body = `<div class="wrap">
     <div class="tabs">
-      <a class="tab ${archive ? '' : 'active'}" href="${DASH}">Active</a>
+      <a class="tab ${archive ? '' : 'active'}" href="${HOME}">Active</a>
       <a class="tab ${archive ? 'active' : ''}" href="${DASH}/archive">Archive (Completed)</a>
     </div>
     <div class="controls">
@@ -392,7 +378,7 @@ function renderDetail(p) {
   }).join('');
 
   const body = `<div class="wrap">
-    <p><a href="${DASH}">← All projects</a></p>
+    <p><a href="${HOME}">← All projects</a></p>
     <h2 style="font-size:20px;font-weight:800;margin:10px 0 2px">${esc(p.project_name)}</h2>
     <div class="meta">
       <span>Project <b><code>${esc(p.project_id)}</code></b></span>

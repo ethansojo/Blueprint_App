@@ -50,42 +50,29 @@ The same HTML can run as a hosted web app that also **records every project
 submitted through the intake form** in a SQLite database. The backend lives in
 [`blueprint-app/`](blueprint-app/).
 
-### Access model — no login, one unlisted URL
+### Access model — team test domain, no login
 
-There is **no password and no login screen** anywhere. The only public page is
-the customer intake form. Everything internal lives under a single **unlisted
-base path**, `/projects-<random-slug>`, and **that URL is the only barrier** —
-anyone who has it can view and edit. The slug is generated once, kept stable
-across redeploys (persisted on the data volume), and **printed in the boot
-logs** every time the server starts:
-
-```
-════════════════════════════════════════════════════════════════
-Blueprint web app listening on port 3000
-Public intake form:   /intake
-UNLISTED dashboard:   /projects-a1b2c3d4
-   (open <your-domain>/projects-a1b2c3d4 — this URL is the only barrier)
-════════════════════════════════════════════════════════════════
-```
-
-Open your service's **Deploy Logs** in Railway to read the current dashboard
-path. (It's also written to `data/dashboard-url.txt` on the volume.)
+This is set up as an **internal team test domain**: the project **dashboard is
+the landing page** and every module is reachable from it. There is **no login**.
+⚠️ Anyone with the domain can view and edit everything — fine for a shared team
+test site; add a gate before putting real customer data behind it.
 
 ### Routes
 
 | Route | What it serves | Access |
 |---|---|---|
+| `/` | **Dashboard** — Active projects (search, sort, status) + Active/Archive tabs | Open |
+| `/archive` | Completed projects ("Setup Complete") | Open |
+| `/p/:id` | One submission: all fields, field→NetSuite mapping, flagged fields + notes | Open |
+| `/review/:id` | Flag review — Not-sure + custom flags grouped by product/section; edit notes, clear, export | Open |
+| `/app` | The full Blueprint app | Open |
+| `/presentation` | Standalone slide deck | Open |
+| `/source-map`, `/decision-tree` | Redirect into the app's current Source Map / Decision Tree views | Open |
 | `/intake` | Customer intake form (form only, self-contained) | **Public** |
-| `/` | Redirects to `/intake` | Public |
-| `<base>` | Dashboard of every submission (search, sort, status) | Unlisted URL |
-| `<base>/p/:id` | One submission: all fields, field→NetSuite mapping, flagged fields + notes | Unlisted URL |
-| `<base>/app` | The full Blueprint app | Unlisted URL |
-| `<base>/presentation` | Standalone slide deck | Unlisted URL |
-| `<base>/source-map`, `<base>/decision-tree` | Redirect into the app's current Source Map / Decision Tree views | Unlisted URL |
 
-…where `<base>` is `/projects-<slug>` from the boot logs. The plain `/projects`
-path is **not** a route — it returns 404, so the dashboard isn't at a guessable
-URL.
+Open the domain and you land on the dashboard hub; the top nav links to Active,
+Archive, the intake form, and the full app. The data starts empty on a fresh
+deploy and fills as intake forms are submitted **to this domain**.
 
 The intake form **POSTs its full payload to `/api/submissions`** on submit. The
 server stores the submission plus every flagged field — both the customer's
