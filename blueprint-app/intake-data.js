@@ -34,7 +34,7 @@ const INTAKE_SECTIONS = [
     fields: [
       { id: 'itemName',          label: 'Project / Item Name',   type: 'text', required: true, helper: 'e.g. SOJO Tropical 4flv-12PK' },
       { id: 'customerItemNumber',label: 'Customer Item Number',  type: 'text', required: true, helper: 'Your internal SKU' },
-      { id: 'formatType',        label: 'Format Type',           type: 'select', required: true, options: ['Tray','Carton','Shrink Only','Tray + Shrink','Other'] },
+      { id: 'formatType',        label: 'Format Type',           type: 'select', required: true, options: ['Tray','Carton','Shrink Only','Tray + Shrink','RSC','Other'] },
       { id: 'finishedPackFormat',label: 'Finished Pack Format',  type: 'select', required: true, helper: 'How the finished product packs out', options: ['2X12-24PK','4X6-24PK','3X8-24PK','2X6-12PK','12PK','24PK','30PK','Variety 4-flavor', INTAKE_CUSTOM_SENTINEL] },
       { id: 'finishedPackFormatCustom', label: 'Your pack format', type: 'text', required: true, helper: 'Custom values are flagged for Sojo review', showIf: { field: 'finishedPackFormat', equals: INTAKE_CUSTOM_SENTINEL } },
       { id: 'containerSize',     label: 'Container Size',        type: 'select', required: true, options: ['7.5oz','8oz','8.4oz','11.5oz','12oz','16oz','19.2oz','750ml','1L', INTAKE_CUSTOM_SENTINEL] },
