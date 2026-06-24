@@ -60,6 +60,9 @@ const esc = s => String(s == null ? '' : s)
 // Customer intake form — public, linked from the dashboard. Self-contained.
 app.get('/intake', (req, res) => res.sendFile(path.join(PUBLIC_DIR, 'intake.html')));
 
+// The intake form fetches its field definitions from this single source of truth.
+app.get('/intake-data.js', (req, res) => res.sendFile(path.join(__dirname, 'intake-data.js')));
+
 // The form POSTs its full payload here.
 app.post('/api/submissions', (req, res) => {
   const payload = req.body;
