@@ -78,7 +78,8 @@ const INTAKE_SECTIONS = [
       { id: 'lotCodeFormat',  label: 'Lot Code Format', type: 'select', required: true, options: ['MMDDYY (Sojo Standard)','YYMMDD','MMDDYYYY','Custom'] },
       { required: false, id: 'lotCodeCustom',  label: 'Custom format + reasoning', type: 'text', showIf: { field: 'lotCodeFormat', equals: 'Custom' } },
       { id: 'printedDateStandard', label: 'Printed date code: use Sojo Standard?', type: 'select', required: true, options: ['Yes','No'], helper: 'Sojo Standard — Line 1: Best By MMDDYY · Line 2: Sojo Line ID & timestamp of repack' },
-      { required: false, id: 'printedDateCustom',   label: 'Describe your printed date code', type: 'textarea', showIf: { field: 'printedDateStandard', equals: 'No' } },
+      { required: false, id: 'printedLot1Format', label: 'Printed Lot 1 Format', type: 'text', showIf: { field: 'printedDateStandard', equals: 'No' } },
+      { required: false, id: 'lot1Description',    label: 'Lot 1 Description',    type: 'text', showIf: { field: 'printedDateStandard', equals: 'No' } },
       { id: 'dateCodeLocation', label: 'Date code location', type: 'select', required: true, options: ['Top of Carton','Bottom of Carton','Side of Carton','Top of Tray','Other'] },
     ]},
   { id: 's5', num: 5, title: 'Stack Height Requirements', scope: 'product',
@@ -124,10 +125,8 @@ const INTAKE_SECTIONS = [
   { id: 's8', num: 8, title: 'Raw Materials & Packaging', scope: 'product', type: 'bom',
     desc: "List each component in this product's Bill of Materials. One row per material. All item setups are per 1 BOM.",
     fields: [
-      { id: 'wipSupplier', label: 'WIP Supplier',       type: 'select', required: true, options: 'suppliers' },
-      { required: false, id: 'wipSupplierOther', label: 'Specify WIP supplier', type: 'text', showIf: { field: 'wipSupplier', equals: 'Other (specify)' } },
-      { id: 'pkgSupplier', label: 'Packaging Supplier', type: 'select', required: true, options: 'suppliers' },
-      { required: false, id: 'pkgSupplierOther', label: 'Specify packaging supplier', type: 'text', showIf: { field: 'pkgSupplier', equals: 'Other (specify)' } },
+      // ⚑ NetSuite destination TBD — confirm during post-presentation NetSuite field work
+      { id: 'systemLotFormatDesc', label: 'System Lot Format Description', type: 'text', required: false },
     ]},
   { id: 's9', num: 9, title: 'Artwork & Dielines', scope: 'product',
     desc: 'Everything our engineering team needs to spec the pack.',
@@ -146,18 +145,17 @@ const INTAKE_SECTIONS = [
 const BOM_ROW_FIELDS = [
   { id: 'materialType', label: 'Material Type', type: 'select', required: true, options: ['WIP / Raw Material','Packaging Material','Label','Sticker','Other'] },
   { id: 'materialDesc', label: 'Material Description', type: 'text', required: true, helper: 'e.g. SOJO Tropical Punch 12oz Sleek' },
-  { required: false, id: 'flavor',       label: 'Flavor', type: 'text', showIf: { field: 'materialType', equals: 'WIP / Raw Material' } },
   { required: false, id: 'count',        label: 'Count (CT)', type: 'select', options: ['1CT','4CT','6CT','12CT','15CT','24CT','Bulk', INTAKE_CUSTOM_SENTINEL] },
   { required: false, id: 'countCustom',  label: 'Your count (CT)', type: 'text', showIf: { field: 'count', equals: INTAKE_CUSTOM_SENTINEL } },
-  { required: false, id: 'format',       label: 'Format', type: 'select', options: ['Loose','Shrunk','Other'] },
+  { required: false, id: 'format',       label: 'Format', type: 'select', options: ['Loose','Shrunk','Packaging','Other'] },
+  { required: false, id: 'formatOther',  label: 'Specify format', type: 'text', showIf: { field: 'format', equals: 'Other' } },
   { required: false, id: 'custItemNum',  label: 'Customer Item Number', type: 'text' },
   { id: 'bomQty',       label: 'BOM Qty per finished case', type: 'number', required: true },
   { required: false, id: 'rowLotCode',   label: 'Lot Code Format', type: 'select', options: ['MMDDYY (Sojo Standard)','YYMMDD','Custom'] },
   { required: false, id: 'casesPerInboundPallet', label: 'Cases per inbound pallet', type: 'select', options: ['45','56','60','72','88','104', INTAKE_CUSTOM_SENTINEL] },
   { required: false, id: 'casesPerInboundPalletCustom', label: 'Your cases per inbound pallet', type: 'number', showIf: { field: 'casesPerInboundPallet', equals: INTAKE_CUSTOM_SENTINEL } },
   { required: false, id: 'inboundPalletType', label: 'Inbound Pallet Type', type: 'select', options: ['GMA Whitewood','Plastic','CHEP','Other'] },
-  { required: false, id: 'supplier',      label: 'Supplier', type: 'select', options: 'suppliers' },
-  { required: false, id: 'supplierOther', label: 'Specify supplier', type: 'text', showIf: { field: 'supplier', equals: 'Other (specify)' } },
+  { required: false, id: 'supplier',      label: 'Supplier', type: 'text' },
 ];
 
 /* ── NetSuite destination map — { record, section, fieldName } ──────────────
@@ -192,6 +190,8 @@ const INTAKE_FIELD_MAP = {
   minShipShelfLife:    { record: 'blueprint', section: 'Pallet & Stack Specifications', fieldName: 'Finished Shelf Life Days' },
   lotCodeFormat:       { record: 'blueprint', section: 'Item Specific Information', fieldName: 'Finished System Lot Code Format' },
   printedDateStandard: { record: 'blueprint', section: 'Item Specific Information', fieldName: 'Lot 1: Placement / Format / Description' },
+  printedLot1Format:   { record: 'blueprint', section: 'Item Specific Information', fieldName: 'Lot 1: Placement / Format / Description' },
+  lot1Description:     { record: 'blueprint', section: 'Item Specific Information', fieldName: 'Lot 1: Placement / Format / Description' },
   dateCodeLocation:    { record: 'blueprint', section: 'Item Specific Information', fieldName: 'Lot 1: Placement / Format / Description' },
   fgStackHeight:       { record: 'blueprint', section: 'Pallet & Stack Specifications', fieldName: 'Finished Good Max Stack Height' },
   wipStackHeight:      { record: 'blueprint', section: 'Pallet & Stack Specifications', fieldName: 'WIP Max Stack Height' },
@@ -206,8 +206,6 @@ const INTAKE_FIELD_MAP = {
   loadNotes:           { record: 'blueprint', section: 'Outbound + Shipping Defaults', fieldName: 'Outbound Load Details' },
   stickersRequired:    { record: 'variation', section: 'Production Details', fieldName: 'Touch 1: Labels' },
   bomRows:             { record: 'bomline', section: 'BOM Revision', fieldName: 'Component rows (Item · Quantity · Units)' },
-  wipSupplier:         { record: 'rmitem', section: 'SOJO Details', fieldName: 'Vendor Item #' },
-  pkgSupplier:         { record: 'pkgitem', section: 'SOJO Details', fieldName: 'Vendor Item #' },
   dielinesProvided:    { record: 'variation', section: 'Pack Details', fieldName: 'Packaging Dieline' },
   artworkProvided:     { record: 'rmitem', section: 'Primary Information', fieldName: 'Artwork Filed' },
 };
