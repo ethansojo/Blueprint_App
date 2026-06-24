@@ -107,6 +107,12 @@ body { background: var(--bg); color: var(--text); font-family: 'Manrope', sans-s
 .in-flag:hover { color:var(--in-flag); border-color:var(--in-flag); }
 .in-flag.on { color:var(--in-flag); border-color:var(--in-flag); background:var(--in-flag-soft); }
 .in-helper { font-size:11px; color:var(--in-muted); }
+.in-label-left { display:flex; align-items:center; gap:6px; min-width:0; }
+.in-tip { position:relative; display:inline-flex; align-items:center; justify-content:center; width:15px; height:15px; border-radius:50%; border:1px solid var(--in-border); background:#fff; color:var(--in-muted); font-size:10px; font-weight:800; font-style:normal; font-family:'Manrope',sans-serif; line-height:1; cursor:help; user-select:none; flex-shrink:0; }
+.in-tip:hover, .in-tip:focus { color:var(--in-primary); border-color:var(--in-primary); outline:none; }
+.in-tip-pop { position:absolute; bottom:calc(100% + 7px); left:50%; transform:translateX(-50%); width:max-content; max-width:240px; background:var(--in-text); color:#fff; font-size:11px; font-weight:500; line-height:1.45; text-align:left; padding:7px 10px; border-radius:8px; box-shadow:var(--in-shadow); opacity:0; visibility:hidden; transition:opacity .15s; z-index:60; pointer-events:none; white-space:normal; }
+.in-tip-pop::after { content:''; position:absolute; top:100%; left:50%; transform:translateX(-50%); border:5px solid transparent; border-top-color:var(--in-text); }
+.in-tip:hover .in-tip-pop, .in-tip:focus .in-tip-pop, .in-tip:focus-within .in-tip-pop { opacity:1; visibility:visible; }
 .in-input, .in-select, .in-textarea { width:100%; background:#fff; border:1px solid var(--in-border); border-radius:9px; padding:10px 12px; font-family:inherit; font-size:13px; color:var(--in-text); transition:border-color .18s, box-shadow .18s; }
 .in-textarea { min-height:74px; resize:vertical; }
 /* state borders: error > flag > ok; focus rule comes later to win on ties */
@@ -809,6 +815,12 @@ function inSubmit() {
 /* ── field renderers ── */
 function inEsc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;'); }
 function inOpts(f) { return f.options === 'suppliers' ? APPROVED_SUPPLIERS : (f.options || []); }
+// ⓘ info affordance — reveals f.tooltip on hover (desktop) and tap/focus (mobile). Accessible.
+function inTipHTML(f) {
+  if (!f.tooltip) return '';
+  const t = inEsc(f.tooltip);
+  return `<span class="in-tip" tabindex="0" role="note" aria-label="${t}">i<span class="in-tip-pop" role="tooltip">${t}</span></span>`;
+}
 function inFieldHTML(f, answers, setFn, nsMap) {
   if (!inVisible(f, answers)) return '';
   const v = answers[f.id];
@@ -821,7 +833,7 @@ function inFieldHTML(f, answers, setFn, nsMap) {
   if (f.type === 'note') return `<div class="in-note${cond}">${f.label}</div>`;
   const blocked = vFieldBlocks(f, answers, ns);
   const flagged = flIsFlagged(scope, f.id, answers, ns);
-  const label = `<div class="in-label-row"><label class="in-label">${f.label}${f.required ? ' <span class="req">*</span>' : ''}</label>` +
+  const label = `<div class="in-label-row"><span class="in-label-left"><label class="in-label">${f.label}${f.required ? ' <span class="req">*</span>' : ''}</label>${inTipHTML(f)}</span>` +
     `<span class="in-fieldbtns">` +
     `<button type="button" class="in-ns${nsOn ? ' on' : ''}" title="Mark this for your Sojo CSM to walk through with you" onclick="inToggleNS('${scope}','${f.id}')">${nsOn ? '🤔 Not sure ✓' : 'Not sure?'}</button>` +
     `<button type="button" class="in-flag${flagged ? ' on' : ''}" title="Flag this field for Sojo review" onclick="inOpenFlag('${scope}','${f.id}')">⚑</button>` +
@@ -856,7 +868,7 @@ function inBomRowHTML(r, ri) {
     const key = 'bom:' + ri + ':' + f.id;
     const flagged = flBomFlagged(key, r, f.id);
     const blocked = f.required && f.type !== 'note' && vIsVisible(f, r) && inIsEmpty(v);
-    const label = `<div class="in-label-row"><label class="in-label">${f.label}${f.required ? ' <span class="req">*</span>' : ''}</label>` +
+    const label = `<div class="in-label-row"><span class="in-label-left"><label class="in-label">${f.label}${f.required ? ' <span class="req">*</span>' : ''}</label>${inTipHTML(f)}</span>` +
       `<button type="button" class="in-flag${flagged ? ' on' : ''}" title="Flag this field for Sojo review" onclick="inOpenFlag('p','${key}')">⚑</button></div>` +
       (f.helper ? `<div class="in-helper">${f.helper}</div>` : '');
     let input;
