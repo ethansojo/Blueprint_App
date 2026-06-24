@@ -124,10 +124,7 @@ const INTAKE_SECTIONS = [
     ]},
   { id: 's8', num: 8, title: 'Raw Materials & Packaging', scope: 'product', type: 'bom',
     desc: "List each component in this product's Bill of Materials. One row per material. All item setups are per 1 BOM.",
-    fields: [
-      // ⚑ NetSuite destination TBD — confirm during post-presentation NetSuite field work
-      { id: 'systemLotFormatDesc', label: 'System Lot Format Description', type: 'text', required: false },
-    ]},
+    fields: [] },
   { id: 's9', num: 9, title: 'Artwork & Dielines', scope: 'product',
     desc: 'Everything our engineering team needs to spec the pack.',
     fields: [
@@ -152,6 +149,8 @@ const BOM_ROW_FIELDS = [
   { required: false, id: 'custItemNum',  label: 'Customer Item Number', type: 'text' },
   { id: 'bomQty',       label: 'BOM Qty per finished case', type: 'number', required: true },
   { required: false, id: 'rowLotCode',   label: 'Lot Code Format', type: 'select', options: ['MMDDYY (Sojo Standard)','YYMMDD','Custom'] },
+  // ⚑ NetSuite destination TBD — confirm during post-presentation NetSuite field work
+  { required: false, id: 'systemLotFormatDesc', label: 'System Lot Format Description', type: 'text' },
   { required: false, id: 'casesPerInboundPallet', label: 'Cases per inbound pallet', type: 'select', options: ['45','56','60','72','88','104', INTAKE_CUSTOM_SENTINEL] },
   { required: false, id: 'casesPerInboundPalletCustom', label: 'Your cases per inbound pallet', type: 'number', showIf: { field: 'casesPerInboundPallet', equals: INTAKE_CUSTOM_SENTINEL } },
   { required: false, id: 'inboundPalletType', label: 'Inbound Pallet Type', type: 'select', options: ['GMA Whitewood','Plastic','CHEP','Other'] },
