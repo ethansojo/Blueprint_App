@@ -45,7 +45,7 @@ const INTAKE_SECTIONS = [
       { id: 'numFlavors',        label: 'Number of Flavors',     type: 'select', required: true, options: ['1','2','3','4','5','6+'] },
       { id: 'inboundCaseCount',  label: 'Inbound Case Count',    type: 'select', required: true, helper: 'Units per inbound WIP case', options: ['12','15','24','24 Loose','30','Bulk', INTAKE_CUSTOM_SENTINEL] },
       { id: 'inboundCaseCountCustom', label: 'Your inbound case count', type: 'number', required: true, helper: 'Custom values are flagged for Sojo review', showIf: { field: 'inboundCaseCount', equals: INTAKE_CUSTOM_SENTINEL } },
-      { id: 'casesPerPallet',    label: 'Cases per Pallet',      type: 'select', required: true, helper: 'Finished good cases per outbound pallet — pick a typical value or enter your own', options: ['45','56','60','65','72','80','84','91','104', INTAKE_CUSTOM_SENTINEL] },
+      { id: 'casesPerPallet',    label: 'Cases per Pallet',      type: 'select', required: true, helper: 'Finished good cases per outbound pallet — pick a typical value or enter your own', options: ['45','56','60','65','72','80','84','91','100','104', INTAKE_CUSTOM_SENTINEL] },
       { id: 'casesPerPalletCustom', label: 'Your cases per pallet', type: 'number', required: true, helper: 'Custom values are flagged for Sojo review', showIf: { field: 'casesPerPallet', equals: INTAKE_CUSTOM_SENTINEL } },
       { id: 'palletType',        label: 'Pallet Type',           type: 'select', required: true, options: ['GMA Whitewood','Plastic','CHEP','Other'] },
       { id: 'masterCaseShrink',  label: 'Does the master case require shrink?', type: 'select', required: true, options: ['Yes','No'], helper: 'Yes = a two-touch (double-touch) job — second-touch details required below' },
